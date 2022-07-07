@@ -3,9 +3,10 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-06 19:41:28
+ * @LastEditTime: 2022-07-07 17:54:04
  */
 import useCanavs from "./utils/drawCanvas.js";
+import { getHMS } from "./utils/util.js";
 class bcPlayer {
   // 视频源真实宽高
   #realVideoWidth = 0;
@@ -15,9 +16,16 @@ class bcPlayer {
   maxPictureIndex = 0;
   played = false;
   paused = true;
+  // 是否放大
+  isEnlarge = false;
+  initVideo = {
+    currentTime: 0, // 当前播放时间
+    videoLength: 0, // 总时间
+    formatCurrentTime: "00:00:00", // 格式化的时长
+    formatVideoLength: "00:00:00", // 格式化的当前播放时间
+  };
   constructor(configuration) {
     this.configuration = configuration;
-
     this._validate() && this.draw();
   }
   _console(type, message) {
@@ -59,18 +67,26 @@ class bcPlayer {
     video.id = "bc-video";
     video.style.width = "0";
     video.style.height = "0";
-    const setRealSizeAndFirstPicture = (e) => {
+    function setRealSizeAndFirstPicture(e) {
       this.#realVideoWidth = e.target.videoWidth;
       this.#realVideoHeight = e.target.videoHeight;
       setTimeout(() => {
         drawFirstPicture(0, this.#realVideoWidth, this.#realVideoHeight);
       }, 500);
-    };
-    video.addEventListener("canplay", setRealSizeAndFirstPicture);
+    }
+    function setVideoTime(e) {
+      this.initVideo.videoLength = e.target.duration;
+      this.initVideo.formatVideoLength = getHMS(e.target.duration);
+      const dom = document.getElementsByClassName("bc-timer");
+      dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
+    }
+    video.addEventListener("canplay", setRealSizeAndFirstPicture.bind(this));
+    video.addEventListener("loadedmetadata", setVideoTime.bind(this));
     const parentElement = document.getElementById(id);
     parentElement.appendChild(video);
     return video;
   }
+  // 创建视频层
   _createCanavas() {
     const { id = "video", zIndex = 1000 } = this.configuration;
     const { width, height } = this._getWidthAndHeight();
@@ -86,6 +102,10 @@ class bcPlayer {
     parentElement.appendChild(canvas);
     return canvas;
   }
+  _addButtonSpacing(dom) {
+    dom.style.margin = "0 5px";
+  }
+  // 创建播放按钮
   _createPlayButton() {
     const SVG_NS = "http://www.w3.org/2000/svg";
     const svgDom = document.createElementNS(SVG_NS, "svg");
@@ -123,6 +143,7 @@ class bcPlayer {
     svgDom.style.display = "block";
     return svgDom;
   }
+  // 创建暂停按钮
   _createPausedButton() {
     const SVG_NS = "http://www.w3.org/2000/svg";
     const svgDom = document.createElementNS(SVG_NS, "svg");
@@ -164,6 +185,7 @@ class bcPlayer {
     svgDom.style.display = "none";
     return svgDom;
   }
+  // 添加播放按钮事件
   _addPlayEvent(playDom, pausedDom) {
     playDom.onclick = () => {
       this.played = true;
@@ -172,6 +194,7 @@ class bcPlayer {
       pausedDom.style.display = "block";
     };
   }
+  // 添加暂停按钮事件
   _addPauseEvent(playDom, pausedDom) {
     pausedDom.onclick = () => {
       this.played = false;
@@ -180,6 +203,32 @@ class bcPlayer {
       pausedDom.style.display = "none";
     };
   }
+  _createTime() {
+    const dom = document.createElement("span");
+    dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
+    dom.style.fontSize = "14px";
+    dom.style.color = "#ffffff";
+    dom.className = "bc-timer";
+    this._addButtonSpacing(dom);
+    console.log("create");
+    return dom;
+  }
+  _createPlayAndTimeArea() {
+    const dom = document.createElement("div");
+    dom.style.height = "100%";
+    dom.style.display = "flex";
+    dom.style.alignItems = "center";
+    const playDom = this._createPlayButton();
+    const pausedDom = this._createPausedButton();
+    const timeDom = this._createTime();
+    this._addPlayEvent(playDom, pausedDom);
+    this._addPauseEvent(playDom, pausedDom);
+    dom.appendChild(playDom);
+    dom.appendChild(pausedDom);
+    dom.appendChild(timeDom);
+    return dom;
+  }
+  // 创建前一画面按钮
   _createPrePictureButton() {
     const SVG_NS = "http://www.w3.org/2000/svg";
     const svgDom = document.createElementNS(SVG_NS, "svg");
@@ -206,13 +255,15 @@ class bcPlayer {
     path2.setAttribute("fill", "none");
     path2.setAttribute("stroke", "#ffffff");
     path2.setAttribute("stroke-width", "4");
-    path.setAttribute("stroke-linecap", "round");
+    path2.setAttribute("stroke-linecap", "round");
     path2.setAttribute("stroke-linejoin", "round");
     svgDom.appendChild(path2);
+    this._addButtonSpacing(svgDom);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
     return svgDom;
   }
+  // 创建后一画面按钮
   _createNextPictureButton() {
     const SVG_NS = "http://www.w3.org/2000/svg";
     const svgDom = document.createElementNS(SVG_NS, "svg");
@@ -239,13 +290,15 @@ class bcPlayer {
     path2.setAttribute("fill", "none");
     path2.setAttribute("stroke", "#ffffff");
     path2.setAttribute("stroke-width", "4");
-    path.setAttribute("stroke-linecap", "round");
+    path2.setAttribute("stroke-linecap", "round");
     path2.setAttribute("stroke-linejoin", "round");
     svgDom.appendChild(path2);
+    this._addButtonSpacing(svgDom);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
     return svgDom;
   }
+  // 添加前一画面按钮事件
   _addPreEvent(preDom, drawFirstPicture) {
     const pictureIndex = this.pictureIndex;
     preDom.onclick = () => {
@@ -261,6 +314,7 @@ class bcPlayer {
       );
     };
   }
+  // 添加后一画面按钮事件
   _addNextEvent(nextDom, drawFirstPicture) {
     nextDom.onclick = () => {
       if (this.pictureIndex === this.maxPictureIndex) {
@@ -275,6 +329,119 @@ class bcPlayer {
       );
     };
   }
+  // 创建局部放大按钮
+  _createEnlargeButton() {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const svgDom = document.createElementNS(SVG_NS, "svg");
+    svgDom.setAttribute("width", "24");
+    svgDom.setAttribute("height", "24");
+    svgDom.setAttribute("viewBox", "0 0 48 48");
+    svgDom.setAttribute("fill", "none");
+    const rect = document.createElementNS(SVG_NS, "rect");
+    rect.setAttribute("width", "48");
+    rect.setAttribute("height", "48");
+    rect.setAttribute("fill", "white");
+    rect.setAttribute("fill-opacity", "0.01");
+    svgDom.appendChild(rect);
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute(
+      "d",
+      "M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z"
+    );
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#ffffff");
+    path.setAttribute("stroke-width", "4");
+    path.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path);
+    const path2 = document.createElementNS(SVG_NS, "path");
+    path2.setAttribute("d", "M21 15L21 27");
+    path2.setAttribute("fill", "none");
+    path2.setAttribute("stroke", "#ffffff");
+    path2.setAttribute("stroke-width", "4");
+    path2.setAttribute("stroke-linecap", "round");
+    path2.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path2);
+    const path3 = document.createElementNS(SVG_NS, "path");
+    path3.setAttribute("d", "M15 21L27 21");
+    path3.setAttribute("fill", "none");
+    path3.setAttribute("stroke", "#ffffff");
+    path3.setAttribute("stroke-width", "4");
+    path3.setAttribute("stroke-linecap", "round");
+    path3.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path3);
+    const path4 = document.createElementNS(SVG_NS, "path");
+    path4.setAttribute("d", "M33.2218 33.2218L41.7071 41.7071");
+    path4.setAttribute("fill", "none");
+    path4.setAttribute("stroke", "#ffffff");
+    path4.setAttribute("stroke-width", "4");
+    path4.setAttribute("stroke-linecap", "round");
+    path4.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path4);
+    this._addButtonSpacing(svgDom);
+    svgDom.style.cursor = "pointer";
+    svgDom.style.display = "block";
+    return svgDom;
+  }
+  // 创建取消局部放大按钮
+  _createCancelEnlargeButton() {
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const svgDom = document.createElementNS(SVG_NS, "svg");
+    svgDom.setAttribute("width", "24");
+    svgDom.setAttribute("height", "24");
+    svgDom.setAttribute("viewBox", "0 0 48 48");
+    svgDom.setAttribute("fill", "none");
+    const rect = document.createElementNS(SVG_NS, "rect");
+    rect.setAttribute("width", "48");
+    rect.setAttribute("height", "48");
+    rect.setAttribute("fill", "white");
+    rect.setAttribute("fill-opacity", "0.01");
+    svgDom.appendChild(rect);
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute(
+      "d",
+      "M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z"
+    );
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#ffffff");
+    path.setAttribute("stroke-width", "4");
+    path.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path);
+    const path2 = document.createElementNS(SVG_NS, "path");
+    path2.setAttribute("d", "M15 21L27 21");
+    path2.setAttribute("fill", "none");
+    path2.setAttribute("stroke", "#ffffff");
+    path2.setAttribute("stroke-width", "4");
+    path2.setAttribute("stroke-linecap", "round");
+    path2.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path2);
+    const path3 = document.createElementNS(SVG_NS, "path");
+    path3.setAttribute("d", "M33.2218 33.2218L41.7071 41.7071");
+    path3.setAttribute("fill", "none");
+    path3.setAttribute("stroke", "#ffffff");
+    path3.setAttribute("stroke-width", "4");
+    path3.setAttribute("stroke-linecap", "round");
+    path3.setAttribute("stroke-linejoin", "round");
+    svgDom.appendChild(path3);
+    this._addButtonSpacing(svgDom);
+    svgDom.style.cursor = "pointer";
+    svgDom.style.display = "none";
+    return svgDom;
+  }
+  _addEnlargeEvent(enlargeDom, cancelEnlargeDom) {
+    enlargeDom.onclick = () => {
+      this.isEnlarge = true;
+      enlargeDom.style.display = "none";
+      cancelEnlargeDom.style.display = "block";
+    };
+  }
+  _addCancelEnlargeEvent(enlargeDom, cancelEnlargeDom) {
+    cancelEnlargeDom.onclick = () => {
+      this.isEnlarge = false;
+      enlargeDom.style.display = "block";
+      cancelEnlargeDom.style.display = "none";
+    };
+  }
+  // 创建业务操作区域
   _createHandleArea(drawFirstPicture) {
     const handleAreaDom = document.createElement("div");
     handleAreaDom.style.height = "100%";
@@ -282,12 +449,50 @@ class bcPlayer {
     handleAreaDom.style.alignItems = "center";
     const preDom = this._createPrePictureButton();
     const nextDom = this._createNextPictureButton();
+    const enlargeDom = this._createEnlargeButton();
+    const cancelEnlargeDom = this._createCancelEnlargeButton();
     this._addPreEvent(preDom, drawFirstPicture);
     this._addNextEvent(nextDom, drawFirstPicture);
+    this._addEnlargeEvent(enlargeDom, cancelEnlargeDom);
+    this._addCancelEnlargeEvent(enlargeDom, cancelEnlargeDom);
     handleAreaDom.appendChild(preDom);
     handleAreaDom.appendChild(nextDom);
+    handleAreaDom.appendChild(enlargeDom);
+    handleAreaDom.appendChild(cancelEnlargeDom);
     return handleAreaDom;
   }
+  _createSlider() {
+    const outBarDom = document.createElement("div");
+    outBarDom.style.width = "100%";
+    outBarDom.style.height = "3px";
+    outBarDom.style.backgroundColor = "#ffffff";
+    outBarDom.style.borderRadius = "3px";
+    outBarDom.style.position = "relative";
+    const inlineBarDom = document.createElement("div");
+    inlineBarDom.className = "bc-inline-slider";
+    inlineBarDom.style.width = "0";
+    inlineBarDom.style.height = "3px";
+    inlineBarDom.style.position = "absolute";
+    inlineBarDom.style.left = "0";
+    inlineBarDom.style.bottom = "0";
+    inlineBarDom.style.zIndex = 1;
+    inlineBarDom.style.backgroundColor = "#0072ff";
+    outBarDom.appendChild(inlineBarDom);
+    const btnDom = document.createElement("div");
+    btnDom.style.width = "12px";
+    btnDom.style.height = "12px";
+    btnDom.style.backgroundColor = "#ffffff";
+    btnDom.style.borderRadius = "100%";
+    btnDom.style.boxShadow = "0 0 6px 6px rgba(0, 114, 255, .2)";
+    btnDom.style.position = "absolute";
+    btnDom.style.top = "-4px";
+    btnDom.style.left = "-4px";
+    btnDom.style.zIndex = "2";
+    btnDom.style.cursor = "pointer";
+    outBarDom.appendChild(btnDom);
+    return outBarDom;
+  }
+  // 创建控制条
   _createControls(drawFirstPicture) {
     const { id = "video", zIndex = 1000 } = this.configuration;
     const { width } = this._getWidthAndHeight();
@@ -296,7 +501,7 @@ class bcPlayer {
     controlsDom.style.width = `${width}px`;
     controlsDom.style.height = "60px";
     controlsDom.style.position = "absolute";
-    controlsDom.style.zIndex = zIndex + 2;
+    controlsDom.style.zIndex = zIndex + 10;
     controlsDom.style.bottom = "0";
     controlsDom.style.left = "0";
     controlsDom.style.backgroundColor = "rgba(0,0,0,0.4)";
@@ -313,15 +518,17 @@ class bcPlayer {
     const controlsSliderArea = document.createElement("div");
     controlsSliderArea.style.width = "100%";
     controlsSliderArea.style.height = "50%";
+    controlsSliderArea.style.boxSizing = "border-box";
+    controlsSliderArea.style.padding = "0 10px";
+    controlsSliderArea.style.display = "flex";
+    controlsSliderArea.style.alignItems = "center";
     controlsDom.appendChild(controlsSliderArea);
-    const playDom = this._createPlayButton();
-    const pausedDom = this._createPausedButton();
+    const playAndTimeDom = this._createPlayAndTimeArea();
     const handleAreaDom = this._createHandleArea(drawFirstPicture);
-    controlsButtonArea.appendChild(playDom);
-    controlsButtonArea.appendChild(pausedDom);
+    controlsButtonArea.appendChild(playAndTimeDom);
     controlsButtonArea.appendChild(handleAreaDom);
-    this._addPlayEvent(playDom, pausedDom);
-    this._addPauseEvent(playDom, pausedDom);
+    const sliderDom = this._createSlider();
+    controlsSliderArea.appendChild(sliderDom);
     parentElement.appendChild(controlsDom);
   }
   draw() {
