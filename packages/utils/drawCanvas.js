@@ -3,10 +3,11 @@
  * @Author: weiyang
  * @Date: 2022-07-04 16:54:56
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-06 18:41:23
+ * @LastEditTime: 2022-07-08 17:34:29
  */
 const useCanavs = (canvasDom, videoId, line, column) => {
   const ctx = canvasDom.getContext("2d");
+  let render = null;
   const getCoordinatesList = (ow, oh, line, column) => {
     const coordinatesList = [];
     const w = ow / column;
@@ -27,6 +28,27 @@ const useCanavs = (canvasDom, videoId, line, column) => {
     lineCycle(line, column);
     return coordinatesList;
   };
+  const loop = (index, ow, oh) => {
+    const videoDom = document.getElementById(videoId);
+    const coordinatesList = getCoordinatesList(ow, oh, line, column);
+    ctx.drawImage(
+      videoDom,
+      coordinatesList[index].x,
+      coordinatesList[index].y,
+      ow / column,
+      oh / line,
+      0,
+      0,
+      canvasDom.width,
+      canvasDom.height
+    );
+    if (!videoDom.paused) {
+      render = requestAnimationFrame(() => {
+        loop(index, ow, oh);
+      });
+      return render;
+    }
+  };
   const drawFirstPicture = (index, ow, oh) => {
     const videoDom = document.getElementById(videoId);
     const coordinatesList = getCoordinatesList(ow, oh, line, column);
@@ -44,6 +66,7 @@ const useCanavs = (canvasDom, videoId, line, column) => {
   };
   return {
     drawFirstPicture,
+    loop,
   };
 };
 

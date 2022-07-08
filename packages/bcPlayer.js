@@ -3,9 +3,10 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-07 17:54:04
+ * @LastEditTime: 2022-07-08 17:28:59
  */
 import useCanavs from "./utils/drawCanvas.js";
+import scale from "./utils/scale.js";
 import { getHMS } from "./utils/util.js";
 class bcPlayer {
   // 视频源真实宽高
@@ -24,6 +25,7 @@ class bcPlayer {
     formatCurrentTime: "00:00:00", // 格式化的时长
     formatVideoLength: "00:00:00", // 格式化的当前播放时间
   };
+  #render = null;
   constructor(configuration) {
     this.configuration = configuration;
     this._validate() && this.draw();
@@ -61,17 +63,23 @@ class bcPlayer {
   _createVideoElement(drawFirstPicture) {
     const { url, audioList = [], id = "video" } = this.configuration;
     const video = document.createElement("video");
-    audioList.length > 1 && (video.muted = true);
+    audioList.length >= 1 && (video.muted = true);
+    audioList.length === 0 && (video.muted = false);
     video.autoplay = false;
     video.src = url;
     video.id = "bc-video";
     video.style.width = "0";
     video.style.height = "0";
     function setRealSizeAndFirstPicture(e) {
+      console.log("canplay");
       this.#realVideoWidth = e.target.videoWidth;
       this.#realVideoHeight = e.target.videoHeight;
       setTimeout(() => {
-        drawFirstPicture(0, this.#realVideoWidth, this.#realVideoHeight);
+        drawFirstPicture(
+          this.pictureIndex,
+          this.#realVideoWidth,
+          this.#realVideoHeight
+        );
       }, 500);
     }
     function setVideoTime(e) {
@@ -79,9 +87,46 @@ class bcPlayer {
       this.initVideo.formatVideoLength = getHMS(e.target.duration);
       const dom = document.getElementsByClassName("bc-timer");
       dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
+      const scale1 = new scale(
+        "bc-slider-btn",
+        "bc-outBar",
+        "bc-inline-slider",
+        this.initVideo.videoLength,
+        (e) => {
+          video.currentTime = e;
+          this.initVideo.currentTime = e;
+          this.initVideo.formatCurrentTime = getHMS(e);
+          dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
+        }
+      );
+      console.log(scale1);
+    }
+    function handleVideoTimeUpdate(e) {
+      const dom = document.getElementsByClassName("bc-timer");
+      this.initVideo.currentTime = e.target.currentTime;
+      this.initVideo.formatCurrentTime = getHMS(e.target.currentTime);
+      dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
+      const outBarDom = document.getElementById("bc-outBar");
+      const inlineBarDom = document.getElementById("bc-inline-slider");
+      const btnDom = document.getElementById("bc-slider-btn");
+      const x =
+        (this.initVideo.currentTime / this.initVideo.videoLength) *
+        outBarDom.getBoundingClientRect().width;
+      const leftData = x - 4;
+      inlineBarDom.style.width = Math.max(0, x) + "px";
+      btnDom.style.left = leftData + "px";
+      if (video.ended) {
+        this.played = false;
+        this.paused = true;
+        const playDom = document.getElementById("bc-play");
+        const pauseDom = document.getElementById("bc-pause");
+        playDom.style.display = "block";
+        pauseDom.style.display = "none";
+      }
     }
     video.addEventListener("canplay", setRealSizeAndFirstPicture.bind(this));
     video.addEventListener("loadedmetadata", setVideoTime.bind(this));
+    video.addEventListener("timeupdate", handleVideoTimeUpdate.bind(this));
     const parentElement = document.getElementById(id);
     parentElement.appendChild(video);
     return video;
@@ -141,6 +186,7 @@ class bcPlayer {
     svgDom.appendChild(path2);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
+    svgDom.id = "bc-play";
     return svgDom;
   }
   // 创建暂停按钮
@@ -183,24 +229,39 @@ class bcPlayer {
     svgDom.appendChild(path3);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "none";
+    svgDom.id = "bc-pause";
     return svgDom;
   }
   // 添加播放按钮事件
-  _addPlayEvent(playDom, pausedDom) {
+  _addPlayEvent(playDom, pausedDom, videoDom, loop) {
     playDom.onclick = () => {
+      // this.#render && cancelAnimationFrame(this.#render);
       this.played = true;
       this.paused = false;
       playDom.style.display = "none";
       pausedDom.style.display = "block";
+      videoDom.play();
+      this.#render = loop(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
     };
   }
   // 添加暂停按钮事件
-  _addPauseEvent(playDom, pausedDom) {
+  _addPauseEvent(playDom, pausedDom, videoDom, loop) {
     pausedDom.onclick = () => {
+      // this.#render && cancelAnimationFrame(this.#render);
       this.played = false;
       this.paused = true;
       playDom.style.display = "block";
       pausedDom.style.display = "none";
+      videoDom.pause();
+      this.#render = loop(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
     };
   }
   _createTime() {
@@ -213,7 +274,7 @@ class bcPlayer {
     console.log("create");
     return dom;
   }
-  _createPlayAndTimeArea() {
+  _createPlayAndTimeArea(videoDom, loop) {
     const dom = document.createElement("div");
     dom.style.height = "100%";
     dom.style.display = "flex";
@@ -221,8 +282,8 @@ class bcPlayer {
     const playDom = this._createPlayButton();
     const pausedDom = this._createPausedButton();
     const timeDom = this._createTime();
-    this._addPlayEvent(playDom, pausedDom);
-    this._addPauseEvent(playDom, pausedDom);
+    this._addPlayEvent(playDom, pausedDom, videoDom, loop);
+    this._addPauseEvent(playDom, pausedDom, videoDom, loop);
     dom.appendChild(playDom);
     dom.appendChild(pausedDom);
     dom.appendChild(timeDom);
@@ -299,9 +360,9 @@ class bcPlayer {
     return svgDom;
   }
   // 添加前一画面按钮事件
-  _addPreEvent(preDom, drawFirstPicture) {
-    const pictureIndex = this.pictureIndex;
+  _addPreEvent(preDom, drawFirstPicture, loop) {
     preDom.onclick = () => {
+      this.#render && cancelAnimationFrame(this.#render);
       if (this.pictureIndex === 0) {
         this.pictureIndex = this.maxPictureIndex;
       } else {
@@ -312,17 +373,28 @@ class bcPlayer {
         this.#realVideoWidth,
         this.#realVideoHeight
       );
+      this.#render = loop(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
     };
   }
   // 添加后一画面按钮事件
-  _addNextEvent(nextDom, drawFirstPicture) {
+  _addNextEvent(nextDom, drawFirstPicture, loop) {
     nextDom.onclick = () => {
+      this.#render && cancelAnimationFrame(this.#render);
       if (this.pictureIndex === this.maxPictureIndex) {
         this.pictureIndex = 0;
       } else {
         this.pictureIndex++;
       }
       drawFirstPicture(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
+      this.#render = loop(
         this.pictureIndex,
         this.#realVideoWidth,
         this.#realVideoHeight
@@ -442,7 +514,7 @@ class bcPlayer {
     };
   }
   // 创建业务操作区域
-  _createHandleArea(drawFirstPicture) {
+  _createHandleArea(drawFirstPicture, loop) {
     const handleAreaDom = document.createElement("div");
     handleAreaDom.style.height = "100%";
     handleAreaDom.style.display = "flex";
@@ -451,8 +523,8 @@ class bcPlayer {
     const nextDom = this._createNextPictureButton();
     const enlargeDom = this._createEnlargeButton();
     const cancelEnlargeDom = this._createCancelEnlargeButton();
-    this._addPreEvent(preDom, drawFirstPicture);
-    this._addNextEvent(nextDom, drawFirstPicture);
+    this._addPreEvent(preDom, drawFirstPicture, loop);
+    this._addNextEvent(nextDom, drawFirstPicture, loop);
     this._addEnlargeEvent(enlargeDom, cancelEnlargeDom);
     this._addCancelEnlargeEvent(enlargeDom, cancelEnlargeDom);
     handleAreaDom.appendChild(preDom);
@@ -468,8 +540,9 @@ class bcPlayer {
     outBarDom.style.backgroundColor = "#ffffff";
     outBarDom.style.borderRadius = "3px";
     outBarDom.style.position = "relative";
+    outBarDom.id = "bc-outBar";
     const inlineBarDom = document.createElement("div");
-    inlineBarDom.className = "bc-inline-slider";
+    inlineBarDom.id = "bc-inline-slider";
     inlineBarDom.style.width = "0";
     inlineBarDom.style.height = "3px";
     inlineBarDom.style.position = "absolute";
@@ -489,11 +562,14 @@ class bcPlayer {
     btnDom.style.left = "-4px";
     btnDom.style.zIndex = "2";
     btnDom.style.cursor = "pointer";
+    btnDom.id = "bc-slider-btn";
     outBarDom.appendChild(btnDom);
+
     return outBarDom;
   }
+  _addBtnEvent(dom) {}
   // 创建控制条
-  _createControls(drawFirstPicture) {
+  _createControls(drawFirstPicture, videoDom, loop) {
     const { id = "video", zIndex = 1000 } = this.configuration;
     const { width } = this._getWidthAndHeight();
     const controlsDom = document.createElement("div");
@@ -523,8 +599,8 @@ class bcPlayer {
     controlsSliderArea.style.display = "flex";
     controlsSliderArea.style.alignItems = "center";
     controlsDom.appendChild(controlsSliderArea);
-    const playAndTimeDom = this._createPlayAndTimeArea();
-    const handleAreaDom = this._createHandleArea(drawFirstPicture);
+    const playAndTimeDom = this._createPlayAndTimeArea(videoDom, loop);
+    const handleAreaDom = this._createHandleArea(drawFirstPicture, loop);
     controlsButtonArea.appendChild(playAndTimeDom);
     controlsButtonArea.appendChild(handleAreaDom);
     const sliderDom = this._createSlider();
@@ -537,9 +613,14 @@ class bcPlayer {
     this._setParentStyle();
     this._getWidthAndHeight();
     const canvasDom = this._createCanavas();
-    const { drawFirstPicture } = useCanavs(canvasDom, "bc-video", line, column);
-    this._createVideoElement(drawFirstPicture);
-    this._createControls(drawFirstPicture);
+    const { drawFirstPicture, loop } = useCanavs(
+      canvasDom,
+      "bc-video",
+      line,
+      column
+    );
+    const videoDom = this._createVideoElement(drawFirstPicture);
+    this._createControls(drawFirstPicture, videoDom, loop);
   }
 }
 
