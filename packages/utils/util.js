@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-07-07 10:39:22
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-11 15:40:32
+ * @LastEditTime: 2022-07-15 17:17:23
  */
 export const getHMS = (time) => {
   const hour =
@@ -23,5 +23,6 @@ export const getHMS = (time) => {
 
 // 求最大公约数
 export const isgy = (a, b) => {
+  console.log(a, b);
   return a % b == 0 ? b : isgy(b, a % b);
 };

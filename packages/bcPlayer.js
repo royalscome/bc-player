@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-15 15:56:53
+ * @LastEditTime: 2022-07-15 17:21:18
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -176,7 +176,7 @@ class bcPlayer {
   // 创建裁剪选定层
   _createTailorCanvas(switchXy, switchWh, zoomLoop) {
     const { width, height } = this._getWidthAndHeight();
-    const { zIndex = 1000, line, column } = this.configuration;
+    const { zIndex = 1000, line = 1, column = 1 } = this.configuration;
     const videoDom = document.getElementById("bc-video");
     const tailorDom = document.createElement("canvas");
     tailorDom.width = width;
