@@ -1,14 +1,31 @@
 {
   "name": "@royalscome/bc-player",
-  "version": "1.0.0-beta.3",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.0-beta.5",
+  "description": "基于canvas实现的视频控件，提供视频切割及视频局部放大功能及音频切换",
+  "main": "dist/index",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --mode=production --config ./webpack.config.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/royalscome/bc-player.git"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.16.7",
+    "@babel/preset-env": "^7.16.7",
+    "@babel/preset-react": "^7.16.7",
+    "@babel/preset-typescript": "^7.16.7",
+    "@types/node": "^17.0.21",
+    "@types/react": "^17.0.39",
+    "@types/react-dom": "^17.0.13",
+    "webpack": "^5.66.0",
+    "babel-loader": "^8.2.3",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4",
+    "webpack-node-externals": "^3.0.0",
+    "terser-webpack-plugin": "^5.3.1",
+    "copy-webpack-plugin": "^10.2.4"
   },
   "author": "",
   "license": "ISC",
