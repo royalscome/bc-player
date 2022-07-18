@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-15 17:21:18
+ * @LastEditTime: 2022-07-18 15:23:35
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -194,6 +194,7 @@ class bcPlayer {
     const minW = this.#realVideoWidth / column / divsor;
     const minh = this.#realVideoHeight / line / divsor;
     const getXy = (e) => {
+      this._resetCoordinates();
       this.#startX = e.offsetX;
       this.#startY = e.offsetY;
       this.#endX = undefined;
@@ -250,6 +251,7 @@ class bcPlayer {
           const playDom = document.getElementById("bc-play");
           playDom.onclick();
         }
+        this._resetCoordinates();
       } else {
         if (videoDom.paused) {
           const playDom = document.getElementById("bc-play");
@@ -265,7 +267,6 @@ class bcPlayer {
       }
       controlsDom.style.display = "block";
       parentElement.removeChild(tailorDom);
-      this._resetCoordinates();
     };
     tailorDom.onmousedown = getXy;
     tailorDom.onmouseup = cancelXy;
@@ -375,6 +376,7 @@ class bcPlayer {
       pausedDom.style.display = "block";
       videoDom.play();
       audioDom && audioDom.play();
+      console.log(this.isEnlarge);
       if (this.isEnlarge) {
         const { width, height } = this._getWidthAndHeight();
         const { x, y } = switchXy(
@@ -394,6 +396,7 @@ class bcPlayer {
           this.#realVideoWidth,
           this.#realVideoHeight
         );
+        console.log(x, y, w, h);
         this.#render = zoomLoop(x, y, w, h);
       } else {
         this.#render = loop(
