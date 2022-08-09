@@ -3,12 +3,12 @@
  * @Author: weiyang
  * @Date: 2022-06-29 13:40:41
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-15 17:21:44
+ * @LastEditTime: 2022-08-08 16:32:16
 -->
 
 # bc-player
 
-[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.3-blue)](https://github.com/royalscome/bc-player)<br/>
+[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.15-blue)](https://github.com/royalscome/bc-player)<br/>
 
 ## introduce
 

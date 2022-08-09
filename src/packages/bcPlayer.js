@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-18 15:23:35
+ * @LastEditTime: 2022-08-08 16:31:41
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -109,7 +109,12 @@ class bcPlayer {
         (e) => {
           video.currentTime = e;
           this.initVideo.currentTime = e;
-          audioDom && (audioDom.currentTime = e);
+          if (audioDom) {
+            audioDom.currentTime = e;
+            if (audioDom.paused && this.played) {
+              audioDom.play();
+            }
+          }
           this.initVideo.formatCurrentTime = getHMS(e);
           dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
         }
@@ -260,6 +265,8 @@ class bcPlayer {
           playDom.style.display = "none";
           pausedDom.style.display = "block";
           videoDom.play();
+          this.played = true;
+          this.paused = false;
           audioDom && audioDom.play();
         }
         cancelAnimationFrame(this.#render);
@@ -778,8 +785,9 @@ class bcPlayer {
   }
   // 添加倍速按钮事件
   _addSpeedEvent(dom, videoDom) {
-    const { speed = [0.5, 1, 2] } = this.configuration;
+    const { speed = [0.5, 1, 1.5, 2] } = this.configuration;
     this.speedList = speed;
+    const audioDom = document.getElementById("bc-audio");
     dom.onclick = () => {
       const tempSpeed = Number(dom.innerText.split("x")[0]);
       const tempIndex = this.speedList.findIndex((item) => item === tempSpeed);
@@ -788,6 +796,9 @@ class bcPlayer {
           ? this.speedList[0]
           : this.speedList[tempIndex + 1];
       videoDom.playbackRate = String(this.speed);
+      if (audioDom) {
+        audioDom.playbackRate = String(this.speed);
+      }
       dom.innerText = `${this.speed}x`;
     };
   }
@@ -805,6 +816,7 @@ class bcPlayer {
     this.audioList = audioList;
     audioDom.src = this.audioList[0];
     audioButtonDom.onclick = () => {
+      console.log(this.played);
       this.audioIndex =
         this.audioIndex === this.audioList.length - 1 ? 0 : this.audioIndex + 1;
       audioDom.src = this.audioList[this.audioIndex];
@@ -874,9 +886,9 @@ class bcPlayer {
       this._addAudioEvent(audioButtonDom, audioDom);
       handleAreaDom.appendChild(audioButtonDom);
     }
-    // const speedDom = this._createSpeedButton();
-    // this._addSpeedEvent(speedDom, videoDom);
-    // handleAreaDom.appendChild(speedDom);
+    const speedDom = this._createSpeedButton();
+    this._addSpeedEvent(speedDom, videoDom);
+    handleAreaDom.appendChild(speedDom);
     return handleAreaDom;
   }
   // 创建进度条
@@ -979,9 +991,18 @@ class bcPlayer {
     parentElement.appendChild(controlsDom);
   }
   destroy() {
+    const videoDom = document.getElementById("bc-video");
+    const audioDom = document.getElementById("bc-audio");
+    videoDom && videoDom.pause();
+    audioDom && audioDom.pause();
     const { id } = this.configuration;
     const parentElement = document.getElementById(id);
-    parentElement.remove();
+    var childs = parentElement.childNodes;
+    setTimeout(() => {
+      for (var i = childs.length - 1; i >= 0; i--) {
+        parentElement.removeChild(childs[i]);
+      }
+    }, 50);
   }
   draw() {
     const {
