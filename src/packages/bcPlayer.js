@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-08-08 16:31:41
+ * @LastEditTime: 2022-08-09 14:15:01
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -848,7 +848,7 @@ class bcPlayer {
     videoDom,
     audioDom
   ) {
-    const { buttonList = ["switchPicture", "enlarge", "audio"] } =
+    const { buttonList = ["switchPicture", "enlarge", "audio"], audioList } =
       this.configuration;
     const handleAreaDom = document.createElement("div");
     handleAreaDom.style.height = "100%";
@@ -881,7 +881,7 @@ class bcPlayer {
       handleAreaDom.appendChild(enlargeDom);
       handleAreaDom.appendChild(cancelEnlargeDom);
     }
-    if (buttonList.includes("audio")) {
+    if (buttonList.includes("audio") && audioList && audioList.length > 0) {
       audioButtonDom = this._createAudioButton();
       this._addAudioEvent(audioButtonDom, audioDom);
       handleAreaDom.appendChild(audioButtonDom);
