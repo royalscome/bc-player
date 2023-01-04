@@ -24,7 +24,7 @@ scale.prototype = {
       const max = f.bar.offsetWidth - this.offsetWidth;
       g.onmousemove = function (e) {
         const thisX = (e || b.event).clientX;
-        const to = m.min(max, m.max(-4, l + (thisX - x)));
+        const to = m.min(max, m.max(-12, l + (thisX - x)));
         f.btn.style.left = to + "px";
         // m.round
         f.ondrag(to);
