@@ -8,7 +8,7 @@
 
 # bc-player
 
-[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.16-blue)](https://github.com/royalscome/bc-player)<br/>
+[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.18-blue)](https://github.com/royalscome/bc-player)<br/>
 
 ## introduce
 

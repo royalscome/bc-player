@@ -29,9 +29,10 @@ const useCanavs = (canvasDom, videoId, line, column) => {
     lineCycle(line, column);
     return coordinatesList;
   };
-  const loop = (index, ow, oh) => {
+  const loop = (index, ow, oh, fixed = false) => {
     const videoDom = document.getElementById(videoId);
     const coordinatesList = getCoordinatesList(ow, oh, line, column);
+    render && cancelAnimationFrame(render);
     ctx.drawImage(
       videoDom,
       coordinatesList[index].x,

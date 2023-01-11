@@ -80,20 +80,34 @@ class bcPlayer {
     audioList.length >= 1 && (video.muted = true);
     audioList.length === 0 && (video.muted = false);
     video.autoplay = false;
+    video.preload = true;
     video.src = url;
+    video.currentTime = 1;
     video.id = "bc-video";
     video.style.width = "0";
     video.style.height = "0";
-    function setRealSizeAndFirstPicture(e) {
+    function setRealSize(e) {
+      // console.log(e.target.videoWidth);
+      // this.#realVideoWidth = e.target.videoWidth;
+      // this.#realVideoHeight = e.target.videoHeight;
+      // setTimeout(() => {
+      //   drawFirstPicture(
+      //     this.pictureIndex,
+      //     this.#realVideoWidth,
+      //     this.#realVideoHeight
+      //   );
+      // }, 500);
+    }
+    function setFirstPicture(e) {
+      // console.log("loadeddata");
       this.#realVideoWidth = e.target.videoWidth;
       this.#realVideoHeight = e.target.videoHeight;
-      setTimeout(() => {
-        drawFirstPicture(
-          this.pictureIndex,
-          this.#realVideoWidth,
-          this.#realVideoHeight
-        );
-      }, 500);
+      drawFirstPicture(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
+      video.currentTime = 0
     }
     function setVideoTime(e) {
       this.initVideo.videoLength = e.target.duration;
@@ -154,7 +168,8 @@ class bcPlayer {
         audioDom && audioDom.pause();
       }
     }
-    video.addEventListener("canplay", setRealSizeAndFirstPicture.bind(this));
+    video.addEventListener("canplay", setRealSize.bind(this));
+    video.addEventListener("loadeddata", setFirstPicture.bind(this));
     video.addEventListener("loadedmetadata", setVideoTime.bind(this));
     video.addEventListener("timeupdate", handleVideoTimeUpdate.bind(this));
     video.id = "bc-video";
@@ -339,7 +354,10 @@ class bcPlayer {
     const g3 = document.createElementNS(SVG_NS, "g");
     g3.setAttribute("transform", "translate(729.094166, 644.139868)");
     const g4 = document.createElementNS(SVG_NS, "g");
-    g4.setAttribute("transform", "translate(12.000000, 12.000000) scale(-1, 1) translate(-12.000000, -12.000000) translate(5.502409, 3.000000)");
+    g4.setAttribute(
+      "transform",
+      "translate(12.000000, 12.000000) scale(-1, 1) translate(-12.000000, -12.000000) translate(5.502409, 3.000000)"
+    );
     const path = document.createElementNS(SVG_NS, "path");
     path.setAttribute(
       "d",
@@ -379,7 +397,6 @@ class bcPlayer {
       pausedDom.style.display = "block";
       videoDom.play();
       audioDom && audioDom.play();
-      console.log(this.isEnlarge);
       if (this.isEnlarge) {
         const { width, height } = this._getWidthAndHeight();
         const { x, y } = switchXy(
@@ -399,13 +416,13 @@ class bcPlayer {
           this.#realVideoWidth,
           this.#realVideoHeight
         );
-        console.log(x, y, w, h);
         this.#render = zoomLoop(x, y, w, h);
       } else {
         this.#render = loop(
           this.pictureIndex,
           this.#realVideoWidth,
-          this.#realVideoHeight
+          this.#realVideoHeight,
+          true
         );
       }
     };
@@ -453,7 +470,8 @@ class bcPlayer {
         this.#render = loop(
           this.pictureIndex,
           this.#realVideoWidth,
-          this.#realVideoHeight
+          this.#realVideoHeight,
+          true
         );
       }
     };
@@ -462,7 +480,8 @@ class bcPlayer {
   _createTime() {
     const dom = document.createElement("span");
     dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
-    dom.style.cssText = "font-size: 14px;font-family: MicrosoftYaHei;color: #FFFFFF;margin-left: 25px;"
+    dom.style.cssText =
+      "font-size: 14px;font-family: MicrosoftYaHei;color: #FFFFFF;margin-left: 25px;";
     dom.className = "bc-timer";
     return dom;
   }
@@ -473,7 +492,7 @@ class bcPlayer {
     switchXy,
     switchWh,
     audioDom,
-    drawFirstPicture,
+    drawFirstPicture
   ) {
     const { buttonList = ["switchPicture", "enlarge", "audio"], audioList } =
       this.configuration;
@@ -511,7 +530,7 @@ class bcPlayer {
     if (buttonList.includes("switchPicture")) {
       preDom = this._createPrePictureButton();
       nextDom = this._createNextPictureButton();
-      this._addPreEvent(preDom, drawFirstPicture, drawFirstPicture);
+      this._addPreEvent(preDom, drawFirstPicture, loop);
       this._addNextEvent(nextDom, drawFirstPicture, loop);
       dom.appendChild(preDom);
       dom.appendChild(nextDom);
@@ -522,16 +541,18 @@ class bcPlayer {
   // 创建前一画面按钮
   _createPrePictureButton() {
     const dom = document.createElement("div");
-    dom.style.cssText = "width: 72px;height: 32px;background: #ffffff;border-radius: 4px;display: flex; justify-content: center;align-items: center;font-size: 14px;color: #333333;margin-left: 20px;"
-    dom.innerText = "前一画面"
+    dom.style.cssText =
+      "width: 72px;height: 32px;background: #ffffff;border-radius: 4px;display: flex; justify-content: center;align-items: center;font-size: 14px;color: #333333;margin-left: 20px;";
+    dom.innerText = "前一画面";
     dom.style.cursor = "pointer";
     return dom;
   }
   // 创建后一画面按钮
   _createNextPictureButton() {
     const dom = document.createElement("div");
-    dom.style.cssText = "width: 72px;height: 32px;background: #ffffff;border-radius: 4px;display: flex; justify-content: center;align-items: center;font-size: 14px;color: #333333;margin-left: 16px"
-    dom.innerText = "后一画面"
+    dom.style.cssText =
+      "width: 72px;height: 32px;background: #ffffff;border-radius: 4px;display: flex; justify-content: center;align-items: center;font-size: 14px;color: #333333;margin-left: 16px";
+    dom.innerText = "后一画面";
     dom.style.cursor = "pointer";
     return dom;
   }
@@ -540,7 +561,7 @@ class bcPlayer {
     preDom.onclick = () => {
       const enlargeDom = document.getElementById("bc-enlarge");
       const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      this.#render && cancelAnimationFrame(this.#render);
+      // this.#render && cancelAnimationFrame(this.#render);
       if (this.pictureIndex === 0) {
         this.pictureIndex = this.maxPictureIndex;
       } else {
@@ -554,7 +575,8 @@ class bcPlayer {
       this.#render = loop(
         this.pictureIndex,
         this.#realVideoWidth,
-        this.#realVideoHeight
+        this.#realVideoHeight,
+        true
       );
       enlargeDom.style.display = "flex";
       cancelEnlargeDom.style.display = "none";
@@ -566,7 +588,7 @@ class bcPlayer {
     nextDom.onclick = () => {
       const enlargeDom = document.getElementById("bc-enlarge");
       const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      this.#render && cancelAnimationFrame(this.#render);
+      // this.#render && cancelAnimationFrame(this.#render);
       if (this.pictureIndex === this.maxPictureIndex) {
         this.pictureIndex = 0;
       } else {
@@ -580,7 +602,8 @@ class bcPlayer {
       this.#render = loop(
         this.pictureIndex,
         this.#realVideoWidth,
-        this.#realVideoHeight
+        this.#realVideoHeight,
+        true
       );
       enlargeDom.style.display = "flex";
       cancelEnlargeDom.style.display = "none";
@@ -696,7 +719,8 @@ class bcPlayer {
       this.#render = loop(
         this.pictureIndex,
         this.#realVideoWidth,
-        this.#realVideoHeight
+        this.#realVideoHeight,
+        true
       );
     };
   }
@@ -741,7 +765,6 @@ class bcPlayer {
     this.audioList = audioList;
     audioDom.src = this.audioList[0];
     audioButtonDom.onclick = () => {
-      console.log(this.played);
       this.audioIndex =
         this.audioIndex === this.audioList.length - 1 ? 0 : this.audioIndex + 1;
       audioDom.src = this.audioList[this.audioIndex];
@@ -817,12 +840,15 @@ class bcPlayer {
     outBarDom.id = "bc-outBar";
     const inlineBarDom = document.createElement("div");
     inlineBarDom.id = "bc-inline-slider";
-    inlineBarDom.style.cssText = "width: 0;height: 6px;border-radius: 6px;position: absolute; left: 0; bottom: 0;z-index: 1;background: #1890FF;max-width: 100%"
+    inlineBarDom.style.cssText =
+      "width: 0;height: 6px;border-radius: 6px;position: absolute; left: 0; bottom: 0;z-index: 1;background: #1890FF;max-width: 100%";
     outBarDom.appendChild(inlineBarDom);
     const btnDom = document.createElement("div");
-    btnDom.style.cssText = "width: 32px;height: 32px;background: rgba(255,255,255,0.69);border-radius: 100%;display: flex; justify-content: center;align-items: center;"
+    btnDom.style.cssText =
+      "width: 32px;height: 32px;background: rgba(255,255,255,0.69);border-radius: 100%;display: flex; justify-content: center;align-items: center;";
     const btnChildDom = document.createElement("div");
-    btnChildDom.style.cssText = "width: 16px;height: 16px;border-radius: 100%;background: #1890ff";
+    btnChildDom.style.cssText =
+      "width: 16px;height: 16px;border-radius: 100%;background: #1890ff";
     btnDom.appendChild(btnChildDom);
     btnDom.style.position = "absolute";
     btnDom.style.top = "-12px";
@@ -853,7 +879,8 @@ class bcPlayer {
     controlsDom.style.zIndex = zIndex + 10;
     controlsDom.style.bottom = "0";
     controlsDom.style.left = "0";
-    controlsDom.style.background = "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6))";
+    controlsDom.style.background =
+      "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.6))";
     controlsDom.style.display = "block";
     const controlsSliderArea = document.createElement("div");
     controlsSliderArea.style.width = "100%";
@@ -870,7 +897,7 @@ class bcPlayer {
     controlsButtonArea.style.display = "flex";
     controlsButtonArea.style.alignItems = "center";
     controlsButtonArea.style.justifyContent = "space-between";
-    controlsButtonArea.style.margin = "0 0 18px 0"
+    controlsButtonArea.style.margin = "0 0 18px 0";
     controlsDom.appendChild(controlsButtonArea);
     const playAndTimeDom = this._createPlayAndTimeArea(
       videoDom,
