@@ -1,6 +1,6 @@
 {
   "name": "@royalscome/bc-player",
-  "version": "1.0.0-beta.18",
+  "version": "1.0.0-beta.19",
   "description": "基于canvas实现的视频控件，提供视频切割及视频局部放大功能及音频切换",
   "main": "dist/index",
   "scripts": {
@@ -27,7 +27,7 @@
     "terser-webpack-plugin": "^5.3.1",
     "copy-webpack-plugin": "^10.2.4"
   },
-  "author": "",
+  "author": "魏洋",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/royalscome/bc-player/issues"

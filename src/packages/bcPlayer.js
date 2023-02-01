@@ -19,6 +19,10 @@ class bcPlayer {
   paused = true;
   // 是否放大
   isEnlarge = false;
+  // 是否展示进度条
+  showProgressBar = true;
+  // 是否展示时间
+  showTime = true;
   initVideo = {
     currentTime: 0, // 当前播放时间
     videoLength: 0, // 总时间
@@ -36,6 +40,10 @@ class bcPlayer {
   audioList = [];
   constructor(configuration) {
     this.configuration = configuration;
+    const { showProgressBar = true, showTime = true } = this.configuration;
+    this.showProgressBar = showProgressBar;
+    this.showTime = showTime;
+    console.log(this.configuration);
     this._validate() && this.draw();
   }
   _console(type, message) {
@@ -107,32 +115,37 @@ class bcPlayer {
         this.#realVideoWidth,
         this.#realVideoHeight
       );
-      video.currentTime = 0
+      video.currentTime = 0;
     }
     function setVideoTime(e) {
       this.initVideo.videoLength = e.target.duration;
       this.initVideo.formatVideoLength = getHMS(e.target.duration);
       const dom = document.getElementsByClassName("bc-timer");
       const audioDom = document.getElementById("bc-audio");
-      dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
-      const scale1 = new scale(
-        "bc-slider-btn",
-        "bc-outBar",
-        "bc-inline-slider",
-        this.initVideo.videoLength,
-        (e) => {
-          video.currentTime = e;
-          this.initVideo.currentTime = e;
-          if (audioDom) {
-            audioDom.currentTime = e;
-            if (audioDom.paused && this.played) {
-              audioDom.play();
+      this.showTime &&
+        (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+      // 进度条拖拽
+      if (this.showProgressBar) {
+        const scale1 = new scale(
+          "bc-slider-btn",
+          "bc-outBar",
+          "bc-inline-slider",
+          this.initVideo.videoLength,
+          (e) => {
+            video.currentTime = e;
+            this.initVideo.currentTime = e;
+            if (audioDom) {
+              audioDom.currentTime = e;
+              if (audioDom.paused && this.played) {
+                audioDom.play();
+              }
             }
+            this.initVideo.formatCurrentTime = getHMS(e);
+            dom &&
+              (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
           }
-          this.initVideo.formatCurrentTime = getHMS(e);
-          dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
-        }
-      );
+        );
+      }
     }
     function handleVideoTimeUpdate(e) {
       const dom = document.getElementsByClassName("bc-timer");
@@ -140,16 +153,21 @@ class bcPlayer {
       const audioDom = document.getElementById("bc-audio");
       this.initVideo.currentTime = e.target.currentTime;
       this.initVideo.formatCurrentTime = getHMS(e.target.currentTime);
-      dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`;
-      const outBarDom = document.getElementById("bc-outBar");
-      const inlineBarDom = document.getElementById("bc-inline-slider");
-      const btnDom = document.getElementById("bc-slider-btn");
-      const x =
-        (this.initVideo.currentTime / this.initVideo.videoLength) *
-        outBarDom.getBoundingClientRect().width;
-      const leftData = x - 12;
-      inlineBarDom.style.width = Math.max(0, x) + "px";
-      btnDom.style.left = leftData + "px";
+      this.showTime &&
+        (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+      // 控制进度条运动
+      if (this.showProgressBar) {
+        const outBarDom = document.getElementById("bc-outBar");
+        const inlineBarDom = document.getElementById("bc-inline-slider");
+        const btnDom = document.getElementById("bc-slider-btn");
+        const x =
+          (this.initVideo.currentTime / this.initVideo.videoLength) *
+          outBarDom.getBoundingClientRect().width;
+        const leftData = x - 12;
+        inlineBarDom.style.width = Math.max(0, x) + "px";
+        btnDom.style.left = leftData + "px";
+      }
+      // 校验音频时间与视频时间误差
       if (
         audioDom &&
         Math.abs(
@@ -494,8 +512,10 @@ class bcPlayer {
     audioDom,
     drawFirstPicture
   ) {
-    const { buttonList = ["switchPicture", "enlarge", "audio"], audioList } =
-      this.configuration;
+    const {
+      buttonList = ["switchPicture", "enlarge", "audio", "speed"],
+      audioList,
+    } = this.configuration;
     const dom = document.createElement("div");
     let preDom,
       nextDom = "";
@@ -504,7 +524,7 @@ class bcPlayer {
     dom.style.alignItems = "center";
     const playDom = this._createPlayButton();
     const pausedDom = this._createPausedButton();
-    const timeDom = this._createTime();
+
     this._addPlayEvent(
       playDom,
       pausedDom,
@@ -535,7 +555,11 @@ class bcPlayer {
       dom.appendChild(preDom);
       dom.appendChild(nextDom);
     }
-    dom.appendChild(timeDom);
+    if (this.showTime) {
+      const timeDom = this._createTime();
+      dom.appendChild(timeDom);
+    }
+
     return dom;
   }
   // 创建前一画面按钮
@@ -796,8 +820,10 @@ class bcPlayer {
     videoDom,
     audioDom
   ) {
-    const { buttonList = ["switchPicture", "enlarge", "audio"], audioList } =
-      this.configuration;
+    const {
+      buttonList = ["switchPicture", "enlarge", "audio", "speed"],
+      audioList,
+    } = this.configuration;
     const handleAreaDom = document.createElement("div");
     handleAreaDom.style.height = "100%";
     handleAreaDom.style.display = "flex";
@@ -824,9 +850,11 @@ class bcPlayer {
       this._addAudioEvent(audioButtonDom, audioDom);
       handleAreaDom.appendChild(audioButtonDom);
     }
-    const speedDom = this._createSpeedButton();
-    this._addSpeedEvent(speedDom, videoDom);
-    handleAreaDom.appendChild(speedDom);
+    if (buttonList.includes("speed")) {
+      const speedDom = this._createSpeedButton();
+      this._addSpeedEvent(speedDom, videoDom);
+      handleAreaDom.appendChild(speedDom);
+    }
     return handleAreaDom;
   }
   // 创建进度条
@@ -919,8 +947,10 @@ class bcPlayer {
     );
     controlsButtonArea.appendChild(playAndTimeDom);
     controlsButtonArea.appendChild(handleAreaDom);
-    const sliderDom = this._createSlider();
-    controlsSliderArea.appendChild(sliderDom);
+    if (this.showProgressBar) {
+      const sliderDom = this._createSlider();
+      controlsSliderArea.appendChild(sliderDom);
+    }
     controlsDom.id = "bc-controls";
     parentElement.appendChild(controlsDom);
   }

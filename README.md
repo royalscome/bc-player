@@ -8,7 +8,7 @@
 
 # bc-player
 
-[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.18-blue)](https://github.com/royalscome/bc-player)<br/>
+[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.19-blue)](https://github.com/royalscome/bc-player)<br/>
 
 ## introduce
 
@@ -22,8 +22,10 @@
 | id         | String   | /                                   | "video"                               | 是       | 容器 id，必须是 id 选择器                                                                    |
 | url        | String   | /                                   | /                                     | 是       | 视频地址，支持 video 标签所支持的所有视频类型                                                |
 | line       | Number   | /                                   | 1                                     | 否       | 视频所需切割为几行                                                                           |
-| column     | Number   | /                                   | 1                                     | 否       | 视频所需切割为几列                                                                           |
-| buttonList | Array    | "switchPicture", "enlarge", "audio" | ["switchPicture", "enlarge", "audio"] | 否       | 对应关系：{"switchPicture"："前后画面切换", "enlarge": "画面放大缩小", "audio": "音频切换" } |
+| column     | Number   | /                                   | 1                                     | 否       | 视频所需切割为几列
+| showProgressBar     | Boolean   | true/false                                   | true                                     | 否       | 是否展示视频进度条，默认展示
+| showTime     | Boolean   | true/false                                   | true                                     | 否       | 是否展示视频时长和当前播放时间，默认展示                                                                               |
+| buttonList | Array    | "switchPicture", "enlarge", "audio", "speed" | ["switchPicture", "enlarge", "audio", "speed"] | 否       | 对应关系：{"switchPicture"："前后画面切换", "enlarge": "画面放大缩小", "audio": "音频切换", "speed": "倍速" } |
 | audioList  | Array    | /                                   | /                                     | 否       | 音频源地址，不传即使用视频本身声音                                                           |
 
 ```javascript
