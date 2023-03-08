@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2022-08-09 14:15:01
+ * @LastEditTime: 2023-03-08 17:52:05
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -350,7 +350,27 @@ class bcPlayer {
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
     svgDom.id = "bc-play";
-    return svgDom;
+    if (this.configuration.stopClickPlay) {
+      const div = document.createElement("div");
+      div.style.position = "relative";
+      svgDom.style.zIndex = "10";
+      div.appendChild(svgDom);
+      const overlay = document.createElement("div");
+      overlay.style.position = "absolute";
+      overlay.style.top = 0;
+      overlay.style.left = 0;
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.zIndex = "100";
+      overlay.style.cursor = "not-allowed";
+      overlay.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+      div.appendChild(overlay);
+      return div;
+    } else {
+      return svgDom;
+    }
   }
   // 创建暂停按钮
   _createPausedButton() {
@@ -395,7 +415,27 @@ class bcPlayer {
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "none";
     svgDom.id = "bc-pause";
-    return svgDom;
+    if (this.configuration.stopClickPlay) {
+      const div = document.createElement("div");
+      div.style.position = "relative";
+      svgDom.style.zIndex = "10";
+      div.appendChild(svgDom);
+      const overlay = document.createElement("div");
+      overlay.style.position = "absolute";
+      overlay.style.top = 0;
+      overlay.style.left = 0;
+      overlay.style.width = "100%";
+      overlay.style.height = "100%";
+      overlay.style.zIndex = "100";
+      overlay.style.cursor = "not-allowed";
+      overlay.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+      div.appendChild(overlay);
+      return div;
+    } else {
+      return svgDom;
+    }
   }
   // 添加播放按钮事件
   _addPlayEvent(
@@ -953,6 +993,14 @@ class bcPlayer {
     }
     controlsDom.id = "bc-controls";
     parentElement.appendChild(controlsDom);
+  }
+  play() {
+    const dom = document.getElementById("bc-play");
+    dom.dispatchEvent(new Event("click"));
+  }
+  pause() {
+    const dom = document.getElementById("bc-pause");
+    dom.dispatchEvent(new Event("click"));
   }
   destroy() {
     const videoDom = document.getElementById("bc-video");
