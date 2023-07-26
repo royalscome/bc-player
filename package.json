@@ -1,6 +1,6 @@
 {
   "name": "@royalscome/bc-player",
-  "version": "1.0.0-beta.23",
+  "version": "1.0.0-beta.33",
   "description": "基于canvas实现的视频控件，提供视频切割及视频局部放大功能及音频切换",
   "main": "dist/index",
   "scripts": {

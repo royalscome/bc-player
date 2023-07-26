@@ -3,12 +3,12 @@
  * @Author: weiyang
  * @Date: 2022-06-29 13:40:41
  * @LastEditors: weiyang
- * @LastEditTime: 2023-03-09 12:41:51
+ * @LastEditTime: 2023-04-04 11:32:48
 -->
 
 # bc-player
 
-[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.23-blue)](https://github.com/royalscome/bc-player)<br/>
+[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.32-blue)](https://github.com/royalscome/bc-player)<br/>
 
 ## introduce
 
@@ -20,8 +20,9 @@
 | 参数名          | 参数类型 | 可选值                                       | 默认值                                         | 是否必传 | 备注                                                                                                          |
 | --------------- | -------- | -------------------------------------------- | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
 | id              | String   | /                                            | "video"                                        | 是       | 容器 id，必须是 id 选择器                                                                                     |
-| url             | String   | /                                            | /                                              | 是       | 视频地址，支持 video 标签所支持的所有视频类型                                                                 |
-| line            | Number   | /                                            | 1                                              | 否       | 视频所需切割为几行                                                                                            |
+| url             | String   | /                                            | /                                              | 是       | 视频地址，支持 video 标签所支持的所有视频类型   
+| line            | Number   | /                                            | 1                                              | 否       | 视频所需切割为几行                                                                |
+| pictureNumber            | Number   | /                          |  column*line                   | 否       | 有多少个画面切                                                                                      |
 | column          | Number   | /                                            | 1                                              | 否       | 视频所需切割为几列                                                                                            |
 | showProgressBar | Boolean  | true/false                                   | true                                           | 否       | 是否展示视频进度条，默认展示                                                                                  |
 | showTime        | Boolean  | true/false                                   | true                                           | 否       | 是否展示视频时长和当前播放时间，默认展示                                                                      |

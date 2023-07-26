@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-07-08 09:50:31
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-08 16:04:09
+ * @LastEditTime: 2023-04-04 10:54:06
  */
 const scale = function (btn, bar, step, timeLength, callback, endBack) {
   this.btn = document.getElementById(btn);
@@ -24,7 +24,7 @@ scale.prototype = {
       const max = f.bar.offsetWidth - this.offsetWidth;
       g.onmousemove = function (e) {
         const thisX = (e || b.event).clientX;
-        const to = m.min(max, m.max(-12, l + (thisX - x)));
+        const to = m.min(max, m.max(-24, l + (thisX - x)));
         f.btn.style.left = to + "px";
         // m.round
         f.ondrag(to);

@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2023-03-09 12:38:50
+ * @LastEditTime: 2023-06-14 10:21:20
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
@@ -43,8 +43,78 @@ class bcPlayer {
     const { showProgressBar = true, showTime = true } = this.configuration;
     this.showProgressBar = showProgressBar;
     this.showTime = showTime;
-    console.log(this.configuration);
     this._validate() && this.draw();
+    this.getConfiguration = function() {
+      return this.configuration;
+    };
+    this.play = () => {
+      const playDom = document.getElementById("bc-play");
+      const pausedDom = document.getElementById("bc-pause");
+      const videoDom = document.getElementById("bc-video");
+      const audioDom = document.getElementById("bc-audio");
+      const canvasDom = document.getElementById("bc-canvas");
+      const newConfiguration = this.getConfiguration();
+      const { line = 1, column = 1 } = newConfiguration;
+      const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
+        canvasDom,
+        "bc-video",
+        line,
+        column
+      );
+      this.playHandler(
+        playDom,
+        pausedDom,
+        videoDom,
+        loop,
+        zoomLoop,
+        switchXy,
+        switchWh,
+        audioDom
+      );
+    }
+    this.pause = () => {
+      // const dom = document.getElementById("bc-pause");
+      // dom.dispatchEvent(new Event("click"));
+      const playDom = document.getElementById("bc-play");
+      const pausedDom = document.getElementById("bc-pause");
+      const videoDom = document.getElementById("bc-video");
+      const audioDom = document.getElementById("bc-audio");
+      const canvasDom = document.getElementById("bc-canvas");
+      const newConfiguration = this.getConfiguration();
+      const { line = 1, column = 1 } = newConfiguration;
+      const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
+        canvasDom,
+        "bc-video",
+        line,
+        column
+      );
+      this.pasueHandler(
+        playDom,
+        pausedDom,
+        videoDom,
+        loop,
+        zoomLoop,
+        switchXy,
+        switchWh,
+        audioDom
+      );
+    }
+    this.setTime = (time) => {
+      const { url, audioList = [], id = "video" } = this.configuration;
+      const audioDom = document.getElementById("bc-audio");
+      const videoDom = document.getElementById("bc-video");
+      videoDom.currentTime = time;
+      audioList.length >= 1 && (audioDom.currentTime = time);
+    }
+    this.getNowPlayTime = () => {
+      return this.initVideo.currentTime
+    }
+    this.getNowPictureIndex = () => {
+      return this.pictureIndex;
+    }
+    this.getNowAudioIndex = () => {
+      return this.audioIndex;
+    }
   }
   _console(type, message) {
     console[type](message);
@@ -64,6 +134,7 @@ class bcPlayer {
     const parentElement = document.getElementById(id);
     parentElement.style.position = "relative";
     parentElement.style.zIndex = String(zIndex);
+    parentElement.style.overflow = "hidden";
   }
   // 获取父级宽高
   _getWidthAndHeight() {
@@ -82,7 +153,7 @@ class bcPlayer {
     this.#endY = 0;
   }
   // 创建video
-  _createVideoElement(drawFirstPicture) {
+  _createVideoElement(drawFirstPicture, videoTime) {
     const { url, audioList = [], id = "video" } = this.configuration;
     const video = document.createElement("video");
     audioList.length >= 1 && (video.muted = true);
@@ -90,10 +161,14 @@ class bcPlayer {
     video.autoplay = false;
     video.preload = true;
     video.src = url;
-    video.currentTime = 1;
+    video.currentTime = videoTime ? videoTime : 1;
     video.id = "bc-video";
     video.style.width = "0";
     video.style.height = "0";
+    if(videoTime) {
+      this.initVideo.currentTime = videoTime;
+      this.initVideo.formatCurrentTime = getHMS(videoTime)
+    }
     function setRealSize(e) {
       // console.log(e.target.videoWidth);
       // this.#realVideoWidth = e.target.videoWidth;
@@ -115,7 +190,7 @@ class bcPlayer {
         this.#realVideoWidth,
         this.#realVideoHeight
       );
-      video.currentTime = 0;
+      video.currentTime = videoTime ? videoTime : 0;
     }
     function setVideoTime(e) {
       this.initVideo.videoLength = e.target.duration;
@@ -163,7 +238,7 @@ class bcPlayer {
         const x =
           (this.initVideo.currentTime / this.initVideo.videoLength) *
           outBarDom.getBoundingClientRect().width;
-        const leftData = x - 12;
+        const leftData = x - 16;
         inlineBarDom.style.width = Math.max(0, x) + "px";
         btnDom.style.left = leftData + "px";
       }
@@ -667,9 +742,11 @@ class bcPlayer {
     preDom.onclick = () => {
       const enlargeDom = document.getElementById("bc-enlarge");
       const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      // this.#render && cancelAnimationFrame(this.#render);
+      const {pictureNumber} = this.configuration;
+      const tempNumber = pictureNumber ? pictureNumber : this.maxPictureIndex;
+      const tempMaxIndex = Number(pictureNumber) % 2 === 0 ? this.maxPictureIndex : this.maxPictureIndex;
       if (this.pictureIndex === 0) {
-        this.pictureIndex = this.maxPictureIndex;
+        this.pictureIndex = tempMaxIndex;
       } else {
         this.pictureIndex--;
       }
@@ -694,8 +771,10 @@ class bcPlayer {
     nextDom.onclick = () => {
       const enlargeDom = document.getElementById("bc-enlarge");
       const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      // this.#render && cancelAnimationFrame(this.#render);
-      if (this.pictureIndex === this.maxPictureIndex) {
+      const {pictureNumber} = this.configuration;
+      const tempNumber = pictureNumber ? pictureNumber : this.maxPictureIndex;
+      const tempMaxIndex = Number(pictureNumber) % 2 === 0 ? this.maxPictureIndex : this.maxPictureIndex;
+      if (this.pictureIndex === tempMaxIndex) {
         this.pictureIndex = 0;
       } else {
         this.pictureIndex++;
@@ -858,18 +937,18 @@ class bcPlayer {
       dom.innerText = `${this.speed}X`;
     };
   }
-  _createAudioButton() {
+  _createAudioButton(audioIndex) {
     const dom = document.createElement("div");
     dom.style.cssText =
-      "width: 56px; height: 32px; border-radius: 4px; cursor: pointer;background: #ffffff; box-sizing: border-box;font-size: 14px;color: #333333; display:flex;justify-content:center;align-items:center;margin-left: 32px;";
-    dom.innerText = "音频1";
+      "width: 56px; height: 32px; border-radius: 4px; cursor: pointer;background: #ffffff; box-sizing: border-box;font-size: 14px;color: #333333; display:flex;justify-content:center;align-items:center;margin-left: 16px;";
+    dom.innerText = `音频${audioIndex ? audioIndex + 1 : 1}`;
     dom.id = "bc-audio-button";
     return dom;
   }
-  _addAudioEvent(audioButtonDom, audioDom) {
+  _addAudioEvent(audioButtonDom, audioDom, audioIndex) {
     const { audioList } = this.configuration;
     this.audioList = audioList;
-    audioDom.src = this.audioList[0];
+    audioDom.src = this.audioList[audioIndex ? audioIndex : 0];
     audioButtonDom.onclick = () => {
       this.audioIndex =
         this.audioIndex === this.audioList.length - 1 ? 0 : this.audioIndex + 1;
@@ -883,13 +962,14 @@ class bcPlayer {
       }
     };
   }
-  _createAudioDom() {
+  _createAudioDom(time) {
     const { id = "video" } = this.configuration;
     const parentElement = document.getElementById(id);
     const dom = document.createElement("audio");
     dom.src = "";
     dom.id = "bc-audio";
     parentElement.appendChild(dom);
+    // dom.currentTime = time;
     return dom;
   }
   // 创建业务操作区域
@@ -900,7 +980,8 @@ class bcPlayer {
     switchWh,
     zoomLoop,
     videoDom,
-    audioDom
+    audioDom,
+    audioIndex
   ) {
     const {
       buttonList = ["switchPicture", "enlarge", "audio", "speed"],
@@ -928,7 +1009,7 @@ class bcPlayer {
       handleAreaDom.appendChild(cancelEnlargeDom);
     }
     if (buttonList.includes("audio") && audioList && audioList.length > 0) {
-      audioButtonDom = this._createAudioButton();
+      audioButtonDom = this._createAudioButton(audioIndex);
       this._addAudioEvent(audioButtonDom, audioDom);
       handleAreaDom.appendChild(audioButtonDom);
     }
@@ -978,7 +1059,8 @@ class bcPlayer {
     switchXy,
     switchWh,
     zoomLoop,
-    audioDom
+    audioDom,
+    audioIndex
   ) {
     const { id = "video", zIndex = 1000 } = this.configuration;
     const { width } = this._getWidthAndHeight();
@@ -995,7 +1077,7 @@ class bcPlayer {
     const controlsSliderArea = document.createElement("div");
     controlsSliderArea.style.width = "100%";
     controlsSliderArea.style.boxSizing = "border-box";
-    controlsSliderArea.style.padding = "0 12px";
+    controlsSliderArea.style.padding = "0 16px";
     controlsSliderArea.style.display = "flex";
     controlsSliderArea.style.alignItems = "center";
     controlsSliderArea.style.margin = "18px 0";
@@ -1025,7 +1107,8 @@ class bcPlayer {
       switchWh,
       zoomLoop,
       videoDom,
-      audioDom
+      audioDom,
+      audioIndex
     );
     controlsButtonArea.appendChild(playAndTimeDom);
     controlsButtonArea.appendChild(handleAreaDom);
@@ -1035,56 +1118,6 @@ class bcPlayer {
     }
     controlsDom.id = "bc-controls";
     parentElement.appendChild(controlsDom);
-  }
-  play() {
-    const playDom = document.getElementById("bc-play");
-    const pausedDom = document.getElementById("bc-pause");
-    const videoDom = document.getElementById("bc-video");
-    const audioDom = document.getElementById("bc-audio");
-    const canvasDom = document.getElementById("bc-canvas");
-    const { line = 1, column = 1 } = this.configuration;
-    const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
-      canvasDom,
-      "bc-video",
-      line,
-      column
-    );
-    this.playHandler(
-      playDom,
-      pausedDom,
-      videoDom,
-      loop,
-      zoomLoop,
-      switchXy,
-      switchWh,
-      audioDom
-    );
-  }
-  pause() {
-    // const dom = document.getElementById("bc-pause");
-    // dom.dispatchEvent(new Event("click"));
-    const playDom = document.getElementById("bc-play");
-    const pausedDom = document.getElementById("bc-pause");
-    const videoDom = document.getElementById("bc-video");
-    const audioDom = document.getElementById("bc-audio");
-    const canvasDom = document.getElementById("bc-canvas");
-    const { line = 1, column = 1 } = this.configuration;
-    const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
-      canvasDom,
-      "bc-video",
-      line,
-      column
-    );
-    this.pasueHandler(
-      playDom,
-      pausedDom,
-      videoDom,
-      loop,
-      zoomLoop,
-      switchXy,
-      switchWh,
-      audioDom
-    );
   }
   destroy() {
     const videoDom = document.getElementById("bc-video");
@@ -1106,8 +1139,13 @@ class bcPlayer {
       column = 1,
       audioList,
       buttonList = ["switchPicture", "enlarge", "audio"],
+      pictureIndex,
+      videoTime,
+      audioIndex
     } = this.configuration;
     this.maxPictureIndex = line * column - 1;
+    pictureIndex && (this.pictureIndex = pictureIndex);
+    audioIndex && (this.audioIndex = audioIndex);
     this._setParentStyle();
     this._getWidthAndHeight();
     const canvasDom = this._createCanavas();
@@ -1117,9 +1155,9 @@ class bcPlayer {
       line,
       column
     );
-    const videoDom = this._createVideoElement(drawFirstPicture);
+    const videoDom = this._createVideoElement(drawFirstPicture, videoTime);
     if (audioList && audioList.length > 0 && buttonList.includes("audio")) {
-      const audioDom = this._createAudioDom();
+      const audioDom = this._createAudioDom(videoTime);
       this._createControls(
         drawFirstPicture,
         videoDom,
@@ -1127,7 +1165,8 @@ class bcPlayer {
         switchXy,
         switchWh,
         zoomLoop,
-        audioDom
+        audioDom,
+        audioIndex
       );
     } else {
       this._createControls(
