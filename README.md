@@ -3,13 +3,16 @@
  * @Author: weiyang
  * @Date: 2022-06-29 13:40:41
  * @LastEditors: weiyang
- * @LastEditTime: 2023-04-04 11:32:48
+ * @LastEditTime: 2023-09-29 20:41:27
 -->
 
 # bc-player
 
-[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.32-blue)](https://github.com/royalscome/bc-player)<br/>
+[![avatar](https://img.shields.io/badge/npm-v1.0.0--beta.41-blue)](https://github.com/royalscome/bc-player)<br/>
 
+## tips
+<p>最新版本为测试发布版本，请勿随意更新</p>
+<p>目前稳定版本为1.0.0-beta.33</p>
 ## introduce
 
 <p>基于canvas实现的视频控件，提供视频切割及视频局部放大功能及音频切换</p>

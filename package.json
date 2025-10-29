@@ -1,11 +1,12 @@
 {
   "name": "@royalscome/bc-player",
-  "version": "1.0.0-beta.33",
+  "version": "1.0.0-beta.54",
   "description": "基于canvas实现的视频控件，提供视频切割及视频局部放大功能及音频切换",
   "main": "dist/index",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --mode=production --config ./webpack.config.js"
+    "build": "webpack --mode=production --config ./webpack.config.js",
+    "build:lib": "webpack --mode=production --config ./webpack.lib.config.js"
   },
   "repository": {
     "type": "git",
@@ -19,13 +20,14 @@
     "@types/node": "^17.0.21",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
-    "webpack": "^5.66.0",
     "babel-loader": "^8.2.3",
+    "copy-webpack-plugin": "^10.2.4",
+    "terser-webpack-plugin": "^5.3.1",
+    "webpack": "^5.66.0",
     "webpack-cli": "^4.9.2",
     "webpack-dev-server": "^4.7.4",
-    "webpack-node-externals": "^3.0.0",
-    "terser-webpack-plugin": "^5.3.1",
-    "copy-webpack-plugin": "^10.2.4"
+    "webpack-merge": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
   },
   "author": "魏洋",
   "license": "ISC",

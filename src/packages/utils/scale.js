@@ -3,12 +3,13 @@
  * @Author: weiyang
  * @Date: 2022-07-08 09:50:31
  * @LastEditors: weiyang
- * @LastEditTime: 2023-04-04 10:54:06
+ * @LastEditTime: 2023-10-01 09:39:59
  */
-const scale = function (btn, bar, step, timeLength, callback, endBack) {
-  this.btn = document.getElementById(btn);
-  this.bar = document.getElementById(bar);
-  this.step = document.getElementById(step);
+import {getElement} from "./util.js"
+const scale = function (btn, bar, step, timeLength, callback, endBack, tag) {
+  this.btn = getElement(btn, tag);
+  this.bar = getElement(bar, tag);
+  this.step = getElement(step, tag);
   this.init(timeLength, callback, endBack);
 };
 scale.prototype = {
@@ -18,7 +19,7 @@ scale.prototype = {
       b = window,
       m = Math;
     let time = 0;
-    f.btn.onmousedown = function (e) {
+    f.btn && (f.btn.onmousedown = function (e) {
       const x = (e || b.event).clientX;
       const l = this.offsetLeft;
       const max = f.bar.offsetWidth - this.offsetWidth;
@@ -38,10 +39,10 @@ scale.prototype = {
           : g.selection.empty();
       };
       g.onmouseup = new Function("this.onmousemove=null");
-    };
-    f.btn.onmouseup = () => {
+    });
+    f.btn && (f.btn.onmouseup = () => {
       endBack && endBack(time);
-    };
+    });
   },
   ondrag: function (x) {
     this.step.style.width = Math.max(0, x) + "px";

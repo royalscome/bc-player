@@ -3,7 +3,7 @@
  * @Author: weiyang
  * @Date: 2022-07-18 14:05:40
  * @LastEditors: weiyang
- * @LastEditTime: 2022-07-18 14:32:30
+ * @LastEditTime: 2023-09-29 22:54:59
  */
 const path = require("path");
 const TerserWebpackPlugin = require("terser-webpack-plugin");

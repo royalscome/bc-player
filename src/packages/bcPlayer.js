@@ -3,11 +3,11 @@
  * @Author: weiyang
  * @Date: 2022-06-29 15:16:13
  * @LastEditors: weiyang
- * @LastEditTime: 2023-06-14 10:21:20
+ * @LastEditTime: 2024-09-10 23:10:18
  */
 import useCanavs from "./utils/drawCanvas.js";
 import scale from "./utils/scale.js";
-import { getHMS, isgy } from "./utils/util.js";
+import { getHMS, isgy, getElement } from "./utils/util.js";
 class bcPlayer {
   // 视频源真实宽高
   #realVideoWidth = 0;
@@ -23,6 +23,10 @@ class bcPlayer {
   showProgressBar = true;
   // 是否展示时间
   showTime = true;
+  // 是否展示操作区域
+  showOption = true;
+  // 是否需要内部创建video
+  needVideo = true;
   initVideo = {
     currentTime: 0, // 当前播放时间
     videoLength: 0, // 总时间
@@ -40,26 +44,43 @@ class bcPlayer {
   audioList = [];
   constructor(configuration) {
     this.configuration = configuration;
-    const { showProgressBar = true, showTime = true } = this.configuration;
+    // this.tag = new Date().getTime().toString() + Math.random().toString();
+    this.tag = this.generateRandomCode(10);
+    const {
+      showProgressBar = true,
+      showTime = true,
+      showOption = true,
+      needVideo = true,
+    } = this.configuration;
     this.showProgressBar = showProgressBar;
     this.showTime = showTime;
+    this.showOption = showOption;
+    this.needVideo = needVideo;
+    this.observers = [];
+    this.loadeddataHandler = null;
+    this.loadedmetadataHandler = null;
+    this.timeupdateHandler = null;
     this._validate() && this.draw();
-    this.getConfiguration = function() {
+    this.getConfiguration = function () {
       return this.configuration;
     };
     this.play = () => {
-      const playDom = document.getElementById("bc-play");
-      const pausedDom = document.getElementById("bc-pause");
-      const videoDom = document.getElementById("bc-video");
-      const audioDom = document.getElementById("bc-audio");
-      const canvasDom = document.getElementById("bc-canvas");
+      const playDom = getElement("play-tag", this.tag);
+      const pausedDom = getElement("pause-tag", this.tag);
+      const videoDom = this.needVideo
+        ? getElement("video-tag", this.tag)
+        : document.getElementById(this.configuration.videoId);
+      const audioDom = getElement("audio-tag", this.tag);
+      const canvasDom = getElement("canvas-tag", this.tag);
       const newConfiguration = this.getConfiguration();
       const { line = 1, column = 1 } = newConfiguration;
       const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
         canvasDom,
-        "bc-video",
+        this.needVideo ? "" : this.configuration.videoId,
         line,
-        column
+        column,
+        this.needVideo,
+        this.tag
       );
       this.playHandler(
         playDom,
@@ -71,22 +92,26 @@ class bcPlayer {
         switchWh,
         audioDom
       );
-    }
+    };
     this.pause = () => {
       // const dom = document.getElementById("bc-pause");
       // dom.dispatchEvent(new Event("click"));
-      const playDom = document.getElementById("bc-play");
-      const pausedDom = document.getElementById("bc-pause");
-      const videoDom = document.getElementById("bc-video");
-      const audioDom = document.getElementById("bc-audio");
-      const canvasDom = document.getElementById("bc-canvas");
+      const playDom = getElement("play-tag", this.tag);
+      const pausedDom = getElement("pause-tag", this.tag);
+      const videoDom = this.needVideo
+        ? getElement("video-tag", this.tag)
+        : document.getElementById(this.configuration.videoId);
+      const audioDom = getElement("audio-tag", this.tag);
+      const canvasDom = getElement("canvas-tag", this.tag);
       const newConfiguration = this.getConfiguration();
       const { line = 1, column = 1 } = newConfiguration;
       const { loop, switchXy, switchWh, zoomLoop } = useCanavs(
         canvasDom,
-        "bc-video",
+        this.needVideo ? "" : this.configuration.videoId,
         line,
-        column
+        column,
+        this.needVideo,
+        this.tag
       );
       this.pasueHandler(
         playDom,
@@ -98,35 +123,65 @@ class bcPlayer {
         switchWh,
         audioDom
       );
-    }
+    };
     this.setTime = (time) => {
-      const { url, audioList = [], id = "video" } = this.configuration;
-      const audioDom = document.getElementById("bc-audio");
-      const videoDom = document.getElementById("bc-video");
+      const { url, audioList = [], id = "video", videoId } = this.configuration;
+      const audioDom = getElement("audio-tag", this.tag);
+      const videoDom = this.needVideo
+        ? getElement("video-tag", this.tag)
+        : document.getElementById(videoId);
       videoDom.currentTime = time;
       audioList.length >= 1 && (audioDom.currentTime = time);
-    }
+    };
     this.getNowPlayTime = () => {
-      return this.initVideo.currentTime
-    }
+      return this.initVideo.currentTime;
+    };
     this.getNowPictureIndex = () => {
       return this.pictureIndex;
-    }
+    };
     this.getNowAudioIndex = () => {
       return this.audioIndex;
-    }
+    };
+    this.setPictureIndex = (index) => {
+      if (Number(index) > this.maxPictureIndex || Number(index < 0)) {
+        return;
+      }
+      this.pictureIndex = Number(index);
+      this.onPictureIndexChange(this.pictureIndex);
+      this.modifyText();
+      this.drawFirstPicture(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
+      this.#render = this.loop(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight,
+        true
+      );
+    };
   }
+
   _console(type, message) {
     console[type](message);
     return !type === "error";
   }
   _validate() {
-    const { url = "" } = this.configuration;
-    if (!url) {
+    const { url = "", needVideo = true } = this.configuration;
+    if (!url && needVideo) {
       return this._console("error", "url must be passed, expect a correct url");
     } else {
       return true;
     }
+  }
+  generateRandomCode(length) {
+    const str = "abcdefghijklmnopqrstuvwxyz";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+      result += str[Math.floor(Math.random() * str.length)];
+    }
+    return result;
   }
   // 设置父级样式
   _setParentStyle() {
@@ -163,11 +218,12 @@ class bcPlayer {
     video.src = url;
     video.currentTime = videoTime ? videoTime : 1;
     video.id = "bc-video";
+    video.setAttribute("video-tag", this.tag);
     video.style.width = "0";
     video.style.height = "0";
-    if(videoTime) {
+    if (videoTime) {
       this.initVideo.currentTime = videoTime;
-      this.initVideo.formatCurrentTime = getHMS(videoTime)
+      this.initVideo.formatCurrentTime = getHMS(videoTime);
     }
     function setRealSize(e) {
       // console.log(e.target.videoWidth);
@@ -195,16 +251,118 @@ class bcPlayer {
     function setVideoTime(e) {
       this.initVideo.videoLength = e.target.duration;
       this.initVideo.formatVideoLength = getHMS(e.target.duration);
-      const dom = document.getElementsByClassName("bc-timer");
-      const audioDom = document.getElementById("bc-audio");
+      if (this.showOption) {
+        const dom = getElement("timer-tag", this.tag);
+        const audioDom = getElement("audio-tag", this.tag);
+        this.showTime &&
+          (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+        // 进度条拖拽
+        if (this.showProgressBar) {
+          const scale1 = new scale(
+            "slider-btn-tag",
+            "outBar-tag",
+            "inline-slider-tag",
+            this.initVideo.videoLength,
+            (e) => {
+              video.currentTime = e;
+              this.initVideo.currentTime = e;
+              if (audioDom) {
+                audioDom.currentTime = e;
+                if (audioDom.paused && this.played) {
+                  audioDom.play();
+                }
+              }
+              this.initVideo.formatCurrentTime = getHMS(e);
+              dom &&
+                (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+            },
+            "",
+            this.tag
+          );
+        }
+      }
+    }
+    function handleVideoTimeUpdate(e) {
+      this.initVideo.currentTime = e.target.currentTime;
+      this.initVideo.formatCurrentTime = getHMS(e.target.currentTime);
+      const audioDom = getElement("audio-tag", this.tag);
+      if (this.showOption) {
+        const dom = getElement("timer-tag", this.tag);
+        const videoDom = getElement("video-tag", this.tag);
+        console.log(tag)
+        this.showTime &&
+          (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+        // 控制进度条运动
+        if (this.showProgressBar) {
+          const outBarDom = getElement("outBar-tag", this.tag);
+          const inlineBarDom = getElement("inline-slider-tag", this.tag);
+          const btnDom = getElement("slider-btn-tag", this.tag);
+          const x =
+            (this.initVideo.currentTime / this.initVideo.videoLength) *
+            outBarDom.getBoundingClientRect().width;
+          const leftData = x - 16;
+          inlineBarDom.style.width = Math.max(0, x) + "px";
+          btnDom.style.left = leftData + "px";
+        }
+      }
+      // 校验音频时间与视频时间误差
+      if (
+        audioDom &&
+        Math.abs(
+          parseFloat(video.currentTime) - parseFloat(audioDom.currentTime)
+        ) > 0.5
+      ) {
+        audioDom.currentTime = videoDom.currentTime;
+      }
+      if (video.ended) {
+        this.played = false;
+        this.paused = true;
+        if (this.showOption) {
+          const playDom = getElement("play-tag", this.tag);
+          const pauseDom = getElement("pause-tag", this.tag);
+          playDom.style.display = "block";
+          pauseDom.style.display = "none";
+        }
+        audioDom && audioDom.pause();
+      }
+    }
+    video.addEventListener("canplay", setRealSize.bind(this));
+    video.addEventListener("loadeddata", setFirstPicture.bind(this));
+    video.addEventListener("loadedmetadata", setVideoTime.bind(this));
+    video.addEventListener("timeupdate", handleVideoTimeUpdate.bind(this));
+    video.id = "bc-video";
+    const parentElement = document.getElementById(id);
+    parentElement.appendChild(video);
+    return video;
+  }
+  setFirstPicture(e) {
+    this.#realVideoWidth = e.target.videoWidth;
+    this.#realVideoHeight = e.target.videoHeight;
+    const video = document.getElementById(this.configuration.videoId);
+    this.drawFirstPicture(
+      this.pictureIndex,
+      this.#realVideoWidth,
+      this.#realVideoHeight
+    );
+    video.currentTime = this.configuration.videoTime
+      ? this.configuration.videoTime
+      : 0;
+  }
+  setVideoTime(e) {
+    this.initVideo.videoLength = e.target.duration;
+    this.initVideo.formatVideoLength = getHMS(e.target.duration);
+    const video = document.getElementById(this.configuration.videoId);
+    if (this.showOption) {
+      const dom = getElement("timer-tag", this.tag);
+      const audioDom = getElement("audio-tag", this.tag);
       this.showTime &&
-        (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+        (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
       // 进度条拖拽
       if (this.showProgressBar) {
         const scale1 = new scale(
-          "bc-slider-btn",
-          "bc-outBar",
-          "bc-inline-slider",
+          "slider-btn-tag",
+          "outBar-tag",
+          "inline-slider-tag",
           this.initVideo.videoLength,
           (e) => {
             video.currentTime = e;
@@ -218,23 +376,28 @@ class bcPlayer {
             this.initVideo.formatCurrentTime = getHMS(e);
             dom &&
               (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
-          }
+          },
+          this.tag
         );
       }
     }
-    function handleVideoTimeUpdate(e) {
-      const dom = document.getElementsByClassName("bc-timer");
-      const videoDom = document.getElementById("bc-video");
-      const audioDom = document.getElementById("bc-audio");
-      this.initVideo.currentTime = e.target.currentTime;
-      this.initVideo.formatCurrentTime = getHMS(e.target.currentTime);
+  }
+  handleVideoTimeUpdate(e) {
+    this.initVideo.currentTime = e.target.currentTime;
+    this.initVideo.formatCurrentTime = getHMS(e.target.currentTime);
+    const video = document.getElementById(this.configuration.videoId);
+    const audioDom = getElement("audio-tag", this.tag);
+    if (this.showOption) {
+      const dom = getElement("timer-tag", this.tag);
+      const videoDom = document.getElementById(this.configuration.videoId);
+      console.log(this.tag);
       this.showTime &&
-        (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+        (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
       // 控制进度条运动
       if (this.showProgressBar) {
-        const outBarDom = document.getElementById("bc-outBar");
-        const inlineBarDom = document.getElementById("bc-inline-slider");
-        const btnDom = document.getElementById("bc-slider-btn");
+        const outBarDom = getElement("outBar-tag", this.tag);
+        const inlineBarDom = getElement("inline-slider-tag", this.tag);
+        const btnDom = getElement("slider-btn-tag", this.tag);
         const x =
           (this.initVideo.currentTime / this.initVideo.videoLength) *
           outBarDom.getBoundingClientRect().width;
@@ -242,32 +405,100 @@ class bcPlayer {
         inlineBarDom.style.width = Math.max(0, x) + "px";
         btnDom.style.left = leftData + "px";
       }
-      // 校验音频时间与视频时间误差
-      if (
-        audioDom &&
-        Math.abs(
-          parseFloat(videoDom.currentTime) - parseFloat(audioDom.currentTime)
-        ) > 0.5
-      ) {
-        audioDom.currentTime = videoDom.currentTime;
-      }
-      if (video.ended) {
-        this.played = false;
-        this.paused = true;
-        const playDom = document.getElementById("bc-play");
-        const pauseDom = document.getElementById("bc-pause");
+    }
+    // 校验音频时间与视频时间误差
+    if (
+      audioDom &&
+      Math.abs(
+        parseFloat(video.currentTime) - parseFloat(audioDom.currentTime)
+      ) > 0.5
+    ) {
+      audioDom.currentTime = videoDom.currentTime;
+    }
+    if (video.ended) {
+      this.played = false;
+      this.paused = true;
+      if (this.showOption) {
+        const playDom = getElement("play-tag", this.tag);
+        const pauseDom = getElement("audio-tag", this.tag);
         playDom.style.display = "block";
         pauseDom.style.display = "none";
-        audioDom && audioDom.pause();
       }
+      audioDom && audioDom.pause();
     }
-    video.addEventListener("canplay", setRealSize.bind(this));
-    video.addEventListener("loadeddata", setFirstPicture.bind(this));
-    video.addEventListener("loadedmetadata", setVideoTime.bind(this));
-    video.addEventListener("timeupdate", handleVideoTimeUpdate.bind(this));
-    video.id = "bc-video";
-    const parentElement = document.getElementById(id);
-    parentElement.appendChild(video);
+  }
+  // 获取video
+  async _getVideoElement(drawFirstPicture, videoId, videoTime) {
+    // 等待video加载
+    await new Promise((resolve) => {
+      const video = document.getElementById(videoId);
+      if (video.readyState >= 1) {
+        resolve(video);
+      } else {
+        video.addEventListener("loadedmetadata", resolve);
+      }
+    });
+    const video = document.getElementById(videoId);
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    // 获取视频时长
+    const videoDuration = video.duration;
+    setTimeout(() => {
+      this.#realVideoWidth = videoWidth;
+      this.#realVideoHeight = videoHeight;
+      video.currentTime = videoTime ? videoTime : 0;
+      drawFirstPicture(
+        this.pictureIndex,
+        this.#realVideoWidth,
+        this.#realVideoHeight
+      );
+      this.initVideo.videoLength = videoDuration;
+      this.initVideo.formatVideoLength = getHMS(videoDuration);
+      if (this.showOption) {
+        const dom = getElement("timer-tag", this.tag);
+        const audioDom = getElement("audio-tag", this.tag);
+        this.showTime &&
+          (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+        // 进度条拖拽
+        if (this.showProgressBar) {
+          const scale1 = new scale(
+            "slider-btn-tag",
+            "outBar-tag",
+            "inline-slider-tag",
+            this.initVideo.videoLength,
+            (e) => {
+              video.currentTime = e;
+              this.initVideo.currentTime = e;
+              if (audioDom) {
+                audioDom.currentTime = e;
+                if (audioDom.paused && this.played) {
+                  audioDom.play();
+                }
+              }
+              this.initVideo.formatCurrentTime = getHMS(e);
+              dom &&
+                (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+            },
+            "",
+            this.tag
+          );
+        }
+      }
+    }, 800);
+    video.autoplay = false;
+    video.preload = true;
+    // video.currentTime = videoTime ? videoTime : 1;
+    if (videoTime) {
+      this.initVideo.currentTime = videoTime;
+      this.initVideo.formatCurrentTime = getHMS(videoTime);
+    }
+    // video.addEventListener("canplay", canplay.bind(this));
+    this.loadeddataHandler = this.setFirstPicture.bind(this);
+    this.loadedmetadataHandler = this.setVideoTime.bind(this);
+    this.timeupdateHandler = this.handleVideoTimeUpdate.bind(this);
+    video.addEventListener("loadeddata", this.loadeddataHandler);
+    video.addEventListener("loadedmetadata", this.loadedmetadataHandler);
+    video.addEventListener("timeupdate", this.timeupdateHandler);
     return video;
   }
   // 创建视频层
@@ -278,27 +509,42 @@ class bcPlayer {
     canvas.width = width;
     canvas.height = height;
     canvas.id = "bc-canvas";
+    canvas.setAttribute("canvas-tag", this.tag);
     canvas.style.position = "absolute";
     canvas.style.zIndex = zIndex + 1;
     canvas.style.top = "0";
     canvas.style.left = "0";
     const parentElement = document.getElementById(id);
     parentElement.appendChild(canvas);
+    const div = document.createElement("div");
+    div.setAttribute(
+      "style",
+      `width: ${width}px; height: ${height}px; position: absolute; z-index: ${
+        zIndex + 3
+      }; top: 0; left: 0; font-size: 12px; box-sizing: border-box; color: #ffffff; padding: 10px; user-select: none; letter-spacing: 2px;`
+    );
+    div.setAttribute("text-tag", this.tag);
+    div.innerText = `画面${this.pictureIndex + 1}`;
+    parentElement.appendChild(div);
     return canvas;
   }
+  modifyText() {
+    getElement("text-tag", this.tag).innerText = `画面${this.pictureIndex + 1}`;
+  }
   // 创建裁剪选定层
-  _createTailorCanvas(switchXy, switchWh, zoomLoop) {
+  _createTailorCanvas(switchXy, switchWh, zoomLoop, videoDom) {
     const { width, height } = this._getWidthAndHeight();
     const { zIndex = 1000, line = 1, column = 1 } = this.configuration;
-    const videoDom = document.getElementById("bc-video");
+    // const videoDom = document.getElementById("bc-video");
     const tailorDom = document.createElement("canvas");
     tailorDom.width = width;
     tailorDom.height = height;
     tailorDom.style.position = "absolute";
     tailorDom.style.left = "0";
     tailorDom.style.top = "0";
-    tailorDom.style.zIndex = `${zIndex + 2}`;
+    tailorDom.style.zIndex = `${zIndex + 5}`;
     tailorDom.id = "bc-shoot";
+    tailorDom.setAttribute("shoot-tag", this.tag);
     tailorDom.style.display = "none";
     const divsor = isgy(
       this.#realVideoWidth / column,
@@ -336,8 +582,8 @@ class bcPlayer {
       const { id = "video" } = this.configuration;
       const parentElement = document.getElementById(id);
       tailorDom.onmousemove = null;
-      const controlsDom = document.getElementById("bc-controls");
-      const audioDom = document.getElementById("bc-audio");
+      const controlsDom = getElement("controls-tag", this.tag);
+      const audioDom = getElement("audio-tag", this.tag);
       const { x, y } = switchXy(
         this.pictureIndex,
         this.#realVideoWidth,
@@ -358,17 +604,17 @@ class bcPlayer {
       if ((!this.#endX && typeof this.#endX !== "number") || w === 0) {
         tailorDom.style.display = "none";
         this.isEnlarge = false;
-        document.getElementById("bc-enlarge").style.display = "block";
-        document.getElementById("bc-cancel-enlarge").style.display = "none";
+        getElement("enlarge-tag", this.tag).style.display = "block";
+        getElement("cancel-enlarge-tag", this.tag).style.display = "none";
         if (videoDom.paused) {
-          const playDom = document.getElementById("bc-play");
+          const playDom = getElement("play-tag", this.tag);
           playDom.onclick();
         }
         this._resetCoordinates();
       } else {
         if (videoDom.paused) {
-          const playDom = document.getElementById("bc-play");
-          const pausedDom = document.getElementById("bc-pause");
+          const playDom = getElement("play-tag", this.tag);
+          const pausedDom = getElement("pause-tag", this.tag);
           tailorDom.style.display = "none";
           playDom.style.display = "none";
           pausedDom.style.display = "block";
@@ -425,6 +671,7 @@ class bcPlayer {
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
     svgDom.id = "bc-play";
+    svgDom.setAttribute("play-tag", this.tag);
     if (this.configuration.stopClickPlay) {
       const div = document.createElement("div");
       div.style.position = "relative";
@@ -490,6 +737,7 @@ class bcPlayer {
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "none";
     svgDom.id = "bc-pause";
+    svgDom.setAttribute("pause-tag", this.tag);
     if (this.configuration.stopClickPlay) {
       const div = document.createElement("div");
       div.style.position = "relative";
@@ -524,8 +772,8 @@ class bcPlayer {
   ) {
     this.played = true;
     this.paused = false;
-    playDom.style.display = "none";
-    pausedDom.style.display = "block";
+    playDom && (playDom.style.display = "none");
+    pausedDom && (pausedDom.style.display = "block");
     videoDom.play();
     audioDom && audioDom.play();
     if (this.isEnlarge) {
@@ -593,8 +841,8 @@ class bcPlayer {
   ) {
     this.played = false;
     this.paused = true;
-    playDom.style.display = "block";
-    pausedDom.style.display = "none";
+    playDom && (playDom.style.display = "block");
+    pausedDom && (pausedDom.style.display = "none");
     videoDom.pause();
     audioDom && audioDom.pause();
     if (this.isEnlarge) {
@@ -658,6 +906,7 @@ class bcPlayer {
     dom.style.cssText =
       "font-size: 14px;font-family: MicrosoftYaHei;color: #FFFFFF;margin-left: 25px;";
     dom.className = "bc-timer";
+    dom.setAttribute("timer-tag", this.tag);
     return dom;
   }
   _createPlayAndTimeArea(
@@ -680,6 +929,7 @@ class bcPlayer {
     dom.style.display = "flex";
     dom.style.alignItems = "center";
     const playDom = this._createPlayButton();
+    // console.log(playDom)
     const pausedDom = this._createPausedButton();
 
     this._addPlayEvent(
@@ -737,18 +987,28 @@ class bcPlayer {
     dom.style.cursor = "pointer";
     return dom;
   }
+  onPictureIndexChange(value) {
+    console.log("pictureIndex被改变了", value);
+  }
   // 添加前一画面按钮事件
   _addPreEvent(preDom, drawFirstPicture, loop) {
     preDom.onclick = () => {
-      const enlargeDom = document.getElementById("bc-enlarge");
-      const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      const {pictureNumber} = this.configuration;
+      const enlargeDom = getElement("enlarge-tag", this.tag);
+      const cancelEnlargeDom = getElement("cancel-enlarge-tag", this.tag);
+      const { pictureNumber } = this.configuration;
       const tempNumber = pictureNumber ? pictureNumber : this.maxPictureIndex;
-      const tempMaxIndex = Number(pictureNumber) % 2 === 0 ? this.maxPictureIndex : this.maxPictureIndex;
+      const tempMaxIndex =
+        Number(pictureNumber) % 2 === 0
+          ? this.maxPictureIndex
+          : this.maxPictureIndex;
       if (this.pictureIndex === 0) {
         this.pictureIndex = tempMaxIndex;
+        this.onPictureIndexChange(this.pictureIndex);
+        this.modifyText();
       } else {
         this.pictureIndex--;
+        this.onPictureIndexChange(this.pictureIndex);
+        this.modifyText();
       }
       drawFirstPicture(
         this.pictureIndex,
@@ -769,15 +1029,22 @@ class bcPlayer {
   // 添加后一画面按钮事件
   _addNextEvent(nextDom, drawFirstPicture, loop) {
     nextDom.onclick = () => {
-      const enlargeDom = document.getElementById("bc-enlarge");
-      const cancelEnlargeDom = document.getElementById("bc-cancel-enlarge");
-      const {pictureNumber} = this.configuration;
+      const enlargeDom = getElement("enlarge-tag", this.tag);
+      const cancelEnlargeDom = getElement("cancel-enlarge-tag", this.tag);
+      const { pictureNumber } = this.configuration;
       const tempNumber = pictureNumber ? pictureNumber : this.maxPictureIndex;
-      const tempMaxIndex = Number(pictureNumber) % 2 === 0 ? this.maxPictureIndex : this.maxPictureIndex;
+      const tempMaxIndex =
+        Number(pictureNumber) % 2 === 0
+          ? this.maxPictureIndex
+          : this.maxPictureIndex;
       if (this.pictureIndex === tempMaxIndex) {
         this.pictureIndex = 0;
+        this.onPictureIndexChange(this.pictureIndex);
+        this.modifyText();
       } else {
         this.pictureIndex++;
+        this.onPictureIndexChange(this.pictureIndex);
+        this.modifyText();
       }
       drawFirstPicture(
         this.pictureIndex,
@@ -827,6 +1094,7 @@ class bcPlayer {
     g4.appendChild(path);
     svgDom.appendChild(g1);
     svgDom.id = "bc-enlarge";
+    svgDom.setAttribute("enlarge-tag", this.tag);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "block";
     return svgDom;
@@ -864,18 +1132,31 @@ class bcPlayer {
     svgDom.appendChild(g1);
     this._addButtonSpacing(svgDom);
     svgDom.id = "bc-cancel-enlarge";
+    svgDom.setAttribute("cancel-enlarge-tag", this.tag);
     svgDom.style.cursor = "pointer";
     svgDom.style.display = "none";
     return svgDom;
   }
   // 添加局部放大按钮事件
-  _addEnlargeEvent(enlargeDom, cancelEnlargeDom, switchXy, switchWh, zoomLoop) {
+  _addEnlargeEvent(
+    enlargeDom,
+    cancelEnlargeDom,
+    switchXy,
+    switchWh,
+    zoomLoop,
+    videoDom
+  ) {
     enlargeDom.onclick = () => {
       const { width, height } = this._getWidthAndHeight();
       const { id = "video" } = this.configuration;
       const parentElement = document.getElementById(id);
-      const controlsDom = document.getElementById("bc-controls");
-      const tailorDom = this._createTailorCanvas(switchXy, switchWh, zoomLoop);
+      const controlsDom = getElement("controls-tag", this.tag);
+      const tailorDom = this._createTailorCanvas(
+        switchXy,
+        switchWh,
+        zoomLoop,
+        videoDom
+      );
       parentElement.appendChild(tailorDom);
       this.isEnlarge = true;
       enlargeDom.style.display = "none";
@@ -884,7 +1165,7 @@ class bcPlayer {
       const ctx = tailorDom.getContext("2d");
       ctx.fillStyle = "rgba(0, 0, 0, .4)";
       ctx.fillRect(0, 0, width, height);
-      const pausedDom = document.getElementById("bc-pause");
+      const pausedDom = getElement("pause-tag", this.tag);
       // this._resetCoordinates();
       pausedDom.onclick();
       controlsDom.style.display = "none";
@@ -916,13 +1197,14 @@ class bcPlayer {
       "width: 58px; height: 32px; border-radius: 4px;  cursor: pointer;background: #ffffff;color: #ffffff; box-sizing: border-box;font-size: 12px; display:flex;justify-content:center;align-items:center;font-size: 14px;color: #333333;margin-left: 16px;";
     dom.innerText = "1X";
     dom.id = "bc-speed";
+    dom.setAttribute("speed-tag", this.tag);
     return dom;
   }
   // 添加倍速按钮事件
   _addSpeedEvent(dom, videoDom) {
     const { speed = [0.5, 1, 1.5, 2] } = this.configuration;
     this.speedList = speed;
-    const audioDom = document.getElementById("bc-audio");
+    const audioDom = getElement("audio-tag", this.tag);
     dom.onclick = () => {
       const tempSpeed = Number(dom.innerText.split("X")[0]);
       const tempIndex = this.speedList.findIndex((item) => item === tempSpeed);
@@ -943,6 +1225,7 @@ class bcPlayer {
       "width: 56px; height: 32px; border-radius: 4px; cursor: pointer;background: #ffffff; box-sizing: border-box;font-size: 14px;color: #333333; display:flex;justify-content:center;align-items:center;margin-left: 16px;";
     dom.innerText = `音频${audioIndex ? audioIndex + 1 : 1}`;
     dom.id = "bc-audio-button";
+    dom.setAttribute("audio-button-tag", this.tag);
     return dom;
   }
   _addAudioEvent(audioButtonDom, audioDom, audioIndex) {
@@ -966,6 +1249,7 @@ class bcPlayer {
     const { id = "video" } = this.configuration;
     const parentElement = document.getElementById(id);
     const dom = document.createElement("audio");
+    dom.setAttribute("audio-tag", this.tag);
     dom.src = "";
     dom.id = "bc-audio";
     parentElement.appendChild(dom);
@@ -1002,7 +1286,8 @@ class bcPlayer {
         cancelEnlargeDom,
         switchXy,
         switchWh,
-        zoomLoop
+        zoomLoop,
+        videoDom
       );
       this._addCancelEnlargeEvent(enlargeDom, cancelEnlargeDom, loop);
       handleAreaDom.appendChild(enlargeDom);
@@ -1029,8 +1314,10 @@ class bcPlayer {
     outBarDom.style.borderRadius = "6px";
     outBarDom.style.position = "relative";
     outBarDom.id = "bc-outBar";
+    outBarDom.setAttribute("outBar-tag", this.tag);
     const inlineBarDom = document.createElement("div");
     inlineBarDom.id = "bc-inline-slider";
+    inlineBarDom.setAttribute("inline-slider-tag", this.tag);
     inlineBarDom.style.cssText =
       "width: 0;height: 6px;border-radius: 6px;position: absolute; left: 0; bottom: 0;z-index: 1;background: #1890FF;max-width: 100%";
     outBarDom.appendChild(inlineBarDom);
@@ -1047,6 +1334,7 @@ class bcPlayer {
     btnDom.style.zIndex = "2";
     btnDom.style.cursor = "pointer";
     btnDom.id = "bc-slider-btn";
+    btnDom.setAttribute("slider-btn-tag", this.tag);
     outBarDom.appendChild(btnDom);
     return outBarDom;
   }
@@ -1062,7 +1350,14 @@ class bcPlayer {
     audioDom,
     audioIndex
   ) {
-    const { id = "video", zIndex = 1000 } = this.configuration;
+    const {
+      id = "video",
+      zIndex = 1000,
+      showOption = true,
+    } = this.configuration;
+    if (!showOption) {
+      return;
+    }
     const { width } = this._getWidthAndHeight();
     const controlsDom = document.createElement("div");
     const parentElement = document.getElementById(id);
@@ -1117,21 +1412,28 @@ class bcPlayer {
       controlsSliderArea.appendChild(sliderDom);
     }
     controlsDom.id = "bc-controls";
+    controlsDom.setAttribute("controls-tag", this.tag);
     parentElement.appendChild(controlsDom);
   }
-  destroy() {
-    const videoDom = document.getElementById("bc-video");
-    const audioDom = document.getElementById("bc-audio");
+  destroy(callBack) {
+    const { needVideo = true, videoId } = this.configuration;
+    if (!needVideo) {
+      const video = document.getElementById(videoId);
+      video.removeEventListener("loadeddata", this.loadeddataHandler);
+      video.removeEventListener("loadedmetadata", this.loadedmetadataHandler);
+      video.removeEventListener("timeupdate", this.timeupdateHandler);
+    }
+    const videoDom = getElement("video-tag", this.tag);
+    const audioDom = getElement("audio-tag", this.tag);
     videoDom && videoDom.pause();
     audioDom && audioDom.pause();
     const { id } = this.configuration;
     const parentElement = document.getElementById(id);
-    var childs = parentElement.childNodes;
-    setTimeout(() => {
-      for (var i = childs.length - 1; i >= 0; i--) {
-        parentElement.removeChild(childs[i]);
-      }
-    }, 50);
+    // 清除所有子元素
+    while (parentElement.firstChild) {
+      parentElement.removeChild(parentElement.firstChild);
+    }
+    callBack && callBack()
   }
   draw() {
     const {
@@ -1141,7 +1443,9 @@ class bcPlayer {
       buttonList = ["switchPicture", "enlarge", "audio"],
       pictureIndex,
       videoTime,
-      audioIndex
+      audioIndex,
+      needVideo = true,
+      videoId,
     } = this.configuration;
     this.maxPictureIndex = line * column - 1;
     pictureIndex && (this.pictureIndex = pictureIndex);
@@ -1151,35 +1455,88 @@ class bcPlayer {
     const canvasDom = this._createCanavas();
     const { drawFirstPicture, loop, switchXy, switchWh, zoomLoop } = useCanavs(
       canvasDom,
-      "bc-video",
+      needVideo ? "" : videoId,
       line,
-      column
+      column,
+      this.needVideo,
+      this.tag
     );
-    const videoDom = this._createVideoElement(drawFirstPicture, videoTime);
-    if (audioList && audioList.length > 0 && buttonList.includes("audio")) {
-      const audioDom = this._createAudioDom(videoTime);
-      this._createControls(
-        drawFirstPicture,
-        videoDom,
-        loop,
-        switchXy,
-        switchWh,
-        zoomLoop,
-        audioDom,
-        audioIndex
-      );
+    this.loop = loop;
+    this.drawFirstPicture = drawFirstPicture;
+    this.zoomLoop = zoomLoop;
+    if (needVideo) {
+      const videoDom = this._createVideoElement(drawFirstPicture, videoTime);
+      if (audioList && audioList.length > 0 && buttonList.includes("audio")) {
+        const audioDom = this._createAudioDom(videoTime);
+        this._createControls(
+          drawFirstPicture,
+          videoDom,
+          loop,
+          switchXy,
+          switchWh,
+          zoomLoop,
+          audioDom,
+          audioIndex
+        );
+      } else {
+        this._createControls(
+          drawFirstPicture,
+          videoDom,
+          loop,
+          switchXy,
+          switchWh,
+          zoomLoop,
+          ""
+        );
+      }
     } else {
-      this._createControls(
-        drawFirstPicture,
-        videoDom,
-        loop,
-        switchXy,
-        switchWh,
-        zoomLoop,
-        ""
+      this._getVideoElement(drawFirstPicture, videoId, videoTime).then(
+        (videoDom) => {
+          if (
+            audioList &&
+            audioList.length > 0 &&
+            buttonList.includes("audio")
+          ) {
+            const audioDom = this._createAudioDom(videoTime);
+            if (!this.showOption) {
+              return;
+            }
+            this._createControls(
+              drawFirstPicture,
+              videoDom,
+              loop,
+              switchXy,
+              switchWh,
+              zoomLoop,
+              audioDom,
+              audioIndex
+            );
+          } else {
+            if (!this.showOption) {
+              return;
+            }
+            this._createControls(
+              drawFirstPicture,
+              videoDom,
+              loop,
+              switchXy,
+              switchWh,
+              zoomLoop,
+              ""
+            );
+          }
+        }
       );
     }
   }
 }
+
+// export default bcPlayer;
+// 兼容 CommonJS 和 ES6 模块
+// if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+//   module.exports = bcPlayer;
+// } else {
+//   window.BCPlayer = bcPlayer;
+// }
 
 export default bcPlayer;
