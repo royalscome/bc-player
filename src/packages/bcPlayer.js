@@ -289,7 +289,6 @@ class bcPlayer {
       if (this.showOption) {
         const dom = getElement("timer-tag", this.tag);
         const videoDom = getElement("video-tag", this.tag);
-        console.log(tag)
         this.showTime &&
           (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
         // 控制进度条运动
@@ -312,7 +311,7 @@ class bcPlayer {
           parseFloat(video.currentTime) - parseFloat(audioDom.currentTime)
         ) > 0.5
       ) {
-        audioDom.currentTime = videoDom.currentTime;
+        audioDom.currentTime = video.currentTime;
       }
       if (video.ended) {
         this.played = false;
@@ -375,7 +374,7 @@ class bcPlayer {
             }
             this.initVideo.formatCurrentTime = getHMS(e);
             dom &&
-              (dom[0].innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
+              (dom.innerText = `${this.initVideo.formatCurrentTime} / ${this.initVideo.formatVideoLength}`);
           },
           this.tag
         );
@@ -413,14 +412,14 @@ class bcPlayer {
         parseFloat(video.currentTime) - parseFloat(audioDom.currentTime)
       ) > 0.5
     ) {
-      audioDom.currentTime = videoDom.currentTime;
+      audioDom.currentTime = video.currentTime;
     }
     if (video.ended) {
       this.played = false;
       this.paused = true;
       if (this.showOption) {
         const playDom = getElement("play-tag", this.tag);
-        const pauseDom = getElement("audio-tag", this.tag);
+        const pauseDom = getElement("pause-tag", this.tag);
         playDom.style.display = "block";
         pauseDom.style.display = "none";
       }
