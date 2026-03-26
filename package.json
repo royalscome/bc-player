@@ -12,7 +12,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run build:npm && npm run build:html",
     "build:npm": "webpack --mode=production --config ./webpack.config.js",
-    "build:html": "webpack --mode=production --config ./webpack.lib.config.js"
+    "build:html": "webpack --mode=production --config ./webpack.lib.config.js",
+    "prepublishOnly": "npm run build",
+    "release": "bash scripts/publish.sh"
   },
   "repository": {
     "type": "git",
