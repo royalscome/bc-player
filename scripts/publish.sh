@@ -70,7 +70,10 @@ info "构建完成"
 # ── git 提交 & 推送 ───────────────────────────────────────
 info "提交代码..."
 git add .
-git commit -m "release: v$NEW_VERSION"
+DEFAULT_MSG="release: v$NEW_VERSION"
+read -r -p "提交信息 (直接回车使用默认: $DEFAULT_MSG): " COMMIT_MSG
+COMMIT_MSG="${COMMIT_MSG:-$DEFAULT_MSG}"
+git commit -m "$COMMIT_MSG"
 git tag "v$NEW_VERSION"
 
 info "推送到远程..."
