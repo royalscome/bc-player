@@ -14,11 +14,9 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
 # ── 检查 npm 登录状态 ─────────────────────────────────────
 NPM_REGISTRY="https://registry.npmjs.org/"
-NPM_USER=$(npm whoami --registry "$NPM_REGISTRY" 2>/dev/null)
+NPM_USER=$(npm whoami --registry "$NPM_REGISTRY" 2>/dev/null || true)
 if [ -z "$NPM_USER" ]; then
-  warn "未登录 npm 官方源，正在引导登录..."
-  npm login --registry "$NPM_REGISTRY" || error "登录失败，请重试"
-  NPM_USER=$(npm whoami --registry "$NPM_REGISTRY")
+  error "未登录 npm 官方源，请先在终端执行：\n\n  npm login --registry https://registry.npmjs.org/\n\n登录完成后再运行 npm run release"
 fi
 info "已登录 npm，用户: $NPM_USER"
 
