@@ -11,18 +11,17 @@ const baseConfig = require('./webpack.config.js');
 
 const libConfig = {
   entry: './src/index.js',
+  target: 'web',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bc-player.js',
     library: 'BCPlayer',
     libraryTarget: 'umd',
-    // libraryTarget: 'esm',
     globalObject: 'this',
   },
-  externals: {
-    // 如果你的库依赖于其他库，可以在这里配置
-    // 'react': 'React'
-  },
+  // 清除 base config 中给 npm 包用的 node externals，UMD 包需自包含
+  externalsPresets: {},
+  externals: [],
 };
 
 module.exports = merge(baseConfig, libConfig);

@@ -38,7 +38,7 @@ scale.prototype = {
           ? b.getSelection().removeAllRanges()
           : g.selection.empty();
       };
-      g.onmouseup = new Function("this.onmousemove=null");
+      g.onmouseup = function () { g.onmousemove = null; };
     });
     f.btn && (f.btn.onmouseup = () => {
       endBack && endBack(time);

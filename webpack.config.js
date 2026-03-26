@@ -7,7 +7,6 @@
  */
 const path = require("path");
 const TerserWebpackPlugin = require("terser-webpack-plugin");
-const nodeExternals = require("webpack-node-externals");
 // const CopyPlugin = require("copy-webpack-plugin");
 
 module.exports = {
@@ -70,10 +69,5 @@ module.exports = {
       }),
     ],
   },
-  externalsPresets: { node: true },
-  externals: [
-    nodeExternals({
-      allowlist: [],
-    }),
-  ],
+  target: "web",
 };

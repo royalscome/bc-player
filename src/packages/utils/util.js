@@ -23,19 +23,19 @@ export const getHMS = (time) => {
 
 // 求最大公约数
 export const isgy = (a, b) => {
-  return a % b == 0 ? b : isgy(b, a % b);
+  if (b === 0) return a;
+  return a % b === 0 ? b : isgy(b, a % b);
 };
 
 export const observer = (pointer, name, callback) => {
   Object.defineProperty(pointer, name, {
-    get(){return pointer[`_${name}`]},
-    set(newVal){
-      console.log("set")
-      pointer[`_${name}`] = newVal
+    get() { return pointer[`_${name}`]; },
+    set(newVal) {
+      pointer[`_${name}`] = newVal;
       callback && callback(newVal);
     }
-  })
-}
+  });
+};
 
 // 取自定义属性元素
 export const getElement = (tagName, tag) => {
