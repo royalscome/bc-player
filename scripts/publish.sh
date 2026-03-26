@@ -12,6 +12,16 @@ info()  { echo -e "${GREEN}[INFO]${NC}  $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
+# ── 检查 npm 登录状态 ─────────────────────────────────────
+NPM_REGISTRY="https://registry.npmjs.org/"
+NPM_USER=$(npm whoami --registry "$NPM_REGISTRY" 2>/dev/null)
+if [ -z "$NPM_USER" ]; then
+  warn "未登录 npm 官方源，正在引导登录..."
+  npm login --registry "$NPM_REGISTRY" || error "登录失败，请重试"
+  NPM_USER=$(npm whoami --registry "$NPM_REGISTRY")
+fi
+info "已登录 npm，用户: $NPM_USER"
+
 # ── 检查工作区是否干净 ────────────────────────────────────
 if [ -n "$(git status --porcelain)" ]; then
   warn "工作区有未提交的改动，是否继续？(y/N)"
@@ -72,7 +82,7 @@ info "代码已推送"
 
 # ── npm 发布 ──────────────────────────────────────────────
 info "发布到 npm..."
-npm publish --access public
+npm publish --access public --registry "$NPM_REGISTRY"
 info "🎉 发布成功！版本 v$NEW_VERSION 已上线"
 echo ""
 echo "  npm: https://www.npmjs.com/package/@royalscome/bc-player"

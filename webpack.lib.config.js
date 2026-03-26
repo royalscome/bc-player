@@ -18,8 +18,8 @@ const libConfig = {
     library: 'BCPlayer',
     libraryTarget: 'umd',
     globalObject: 'this',
+    clean: false,  // 不清理，保留 build:npm 生成的 index.js
   },
-  // 清除 base config 中给 npm 包用的 node externals，UMD 包需自包含
   externalsPresets: {},
   externals: [],
 };
